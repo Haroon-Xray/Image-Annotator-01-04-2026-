@@ -125,8 +125,8 @@ function UploadZone({ onFiles }) {
          style={{ border: `1.5px dashed ${dragging ? '#f5a623' : 'rgba(255,255,255,0.16)'}`, borderRadius: '8px', padding: '18px', textAlign: 'center', cursor: 'pointer', background: dragging ? 'rgba(245,166,35,0.12)' : 'transparent', transition: 'all 0.18s' }}
       >
          <input ref={inputRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={e => onFiles(e.target.files)} />
-         <div style={{ fontSize: 11, fontWeight: 600, color: dragging ? '#f5a623' : '#9ba8bc', marginBottom: 3 }}>Drop images here</div>
-         <div style={{ fontSize: 9, color: '#5a6580', fontFamily: 'var(--font-mono)' }}>PNG · JPG</div>
+         <div style={{ fontSize: 13, fontWeight: 600, color: dragging ? '#f5a623' : '#9ba8bc', marginBottom: 3 }}>Drop images here</div>
+         <div style={{ fontSize: 11, color: '#5a6580', fontFamily: 'var(--font-mono)' }}>PNG · JPG</div>
       </div>
    );
 }
@@ -141,7 +141,7 @@ function bytesToSize(b) {
 }
 
 function ImageStrip({ images, activeIdx, onSelect, onRemove }) {
-   if (images.length === 0) return <div style={{ padding: '20px', textAlign: 'center', fontSize: 9, color: '#3a4458' }}>NO IMAGES</div>;
+   if (images.length === 0) return <div style={{ padding: '20px', textAlign: 'center', fontSize: 11, color: '#3a4458' }}>NO IMAGES</div>;
 
    return (
       <div style={{ padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 3 }}>
@@ -151,13 +151,13 @@ function ImageStrip({ images, activeIdx, onSelect, onRemove }) {
                   <img src={img.src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                </div>
                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: i === activeIdx ? '#f0f2f5' : '#9ba8bc', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: 2 }}>{img.name}</div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: i === activeIdx ? '#f0f2f5' : '#9ba8bc', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: 2 }}>{img.name}</div>
                   <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
-                     {img.annotations.length > 0 && <span style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: '#f5a623', background: 'rgba(245,166,35,0.12)', padding: '1px 5px', borderRadius: 3 }}>{img.annotations.length} boxes</span>}
-                     <span style={{ fontSize: 9, color: '#3a4458', fontFamily: 'var(--font-mono)' }}>{bytesToSize(img.size)}</span>
+                     {img.annotations.length > 0 && <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: '#f5a623', background: 'rgba(245,166,35,0.12)', padding: '1px 5px', borderRadius: 3 }}>{img.annotations.length} boxes</span>}
+                     <span style={{ fontSize: 11, color: '#3a4458', fontFamily: 'var(--font-mono)' }}>{bytesToSize(img.size)}</span>
                   </div>
                </div>
-               <button onClick={e => { e.stopPropagation(); onRemove(i); }} style={{ background: 'none', border: 'none', color: '#3a4458', padding: '2px', cursor: 'pointer', fontSize: 16 }} onMouseEnter={e => e.currentTarget.style.color = '#e05c5c'} onMouseLeave={e => e.currentTarget.style.color = '#3a4458'}>✕</button>
+               <button onClick={e => { e.stopPropagation(); onRemove(i); }} style={{ background: 'none', border: 'none', color: '#3a4458', padding: '2px', cursor: 'pointer', fontSize: 20 }} onMouseEnter={e => e.currentTarget.style.color = '#e05c5c'} onMouseLeave={e => e.currentTarget.style.color = '#3a4458'}>✕</button>
             </div>
          ))}
       </div>
@@ -171,7 +171,7 @@ function AnnotationList({ annotations, onDelete, onLabelChange, onHover }) {
    const [editingId, setEditingId] = useState(null);
    const [editVal, setEditVal] = useState('');
 
-   if (annotations.length === 0) return <div style={{ padding: '20px', textAlign: 'center', fontSize: 9, color: '#3a4458' }}>NO ANNOTATIONS<br />Click and drag on image</div>;
+   if (annotations.length === 0) return <div style={{ padding: '20px', textAlign: 'center', fontSize: 11, color: '#3a4458' }}>NO ANNOTATIONS<br />Click and drag on image</div>;
 
    return (
       <div style={{ padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -179,16 +179,16 @@ function AnnotationList({ annotations, onDelete, onLabelChange, onHover }) {
             <div key={ann.id} onMouseEnter={() => onHover?.(ann.id)} onMouseLeave={() => onHover?.(null)} style={{ padding: '8px 10px', borderRadius: '4px', background: '#161c28', border: '1px solid rgba(255,255,255,0.06)' }}>
                <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 6 }}>
                   <div style={{ width: 18, height: 18, borderRadius: 3, background: 'rgba(245,166,35,0.12)', border: '1px solid rgba(245,166,35,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                     <span style={{ fontSize: 9, fontFamily: 'var(--font-mono)', fontWeight: 700, color: '#f5a623' }}>{i + 1}</span>
+                     <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', fontWeight: 700, color: '#f5a623' }}>{i + 1}</span>
                   </div>
                   {editingId === ann.id ? (
-                     <input autoFocus value={editVal} onChange={e => setEditVal(e.target.value)} onBlur={() => { if (editVal.trim()) onLabelChange(ann.id, editVal.trim()); setEditingId(null); }} onKeyDown={e => { if (e.key === 'Enter') { onLabelChange(ann.id, editVal.trim()); setEditingId(null); } if (e.key === 'Escape') setEditingId(null); }} style={{ flex: 1, background: '#1c2333', border: '1px solid rgba(245,166,35,0.3)', borderRadius: 3, padding: '2px 6px', fontSize: 11, color: '#f0f2f5', outline: 'none', fontFamily: 'var(--font-display)' }} />
+                     <input autoFocus value={editVal} onChange={e => setEditVal(e.target.value)} onBlur={() => { if (editVal.trim()) onLabelChange(ann.id, editVal.trim()); setEditingId(null); }} onKeyDown={e => { if (e.key === 'Enter') { onLabelChange(ann.id, editVal.trim()); setEditingId(null); } if (e.key === 'Escape') setEditingId(null); }} style={{ flex: 1, background: '#1c2333', border: '1px solid rgba(245,166,35,0.3)', borderRadius: 3, padding: '2px 6px', fontSize: 13, color: '#f0f2f5', outline: 'none', fontFamily: 'var(--font-display)' }} />
                   ) : (
-                     <span onClick={() => { setEditingId(ann.id); setEditVal(ann.label); }} style={{ flex: 1, fontSize: 11, fontWeight: 600, color: '#f0f2f5', cursor: 'text' }}>{ann.label}</span>
+                     <span onClick={() => { setEditingId(ann.id); setEditVal(ann.label); }} style={{ flex: 1, fontSize: 13, fontWeight: 600, color: '#f0f2f5', cursor: 'text' }}>{ann.label}</span>
                   )}
-                  <button onClick={() => onDelete(ann.id)} style={{ background: 'none', border: 'none', color: '#3a4458', cursor: 'pointer', fontSize: 14 }} onMouseEnter={e => e.currentTarget.style.color = '#e05c5c'} onMouseLeave={e => e.currentTarget.style.color = '#3a4458'}>✕</button>
+                  <button onClick={() => onDelete(ann.id)} style={{ background: 'none', border: 'none', color: '#3a4458', cursor: 'pointer', fontSize: 17 }} onMouseEnter={e => e.currentTarget.style.color = '#e05c5c'} onMouseLeave={e => e.currentTarget.style.color = '#3a4458'}>✕</button>
                </div>
-               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 8px', fontFamily: 'var(--font-mono)', fontSize: 9, color: '#5a6580' }}>
+               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 8px', fontFamily: 'var(--font-mono)', fontSize: 11, color: '#5a6580' }}>
                   <span>X <span style={{ color: '#9ba8bc' }}>{Math.round(ann.x)}</span></span>
                   <span>Y <span style={{ color: '#9ba8bc' }}>{Math.round(ann.y)}</span></span>
                   <span>W <span style={{ color: '#9ba8bc' }}>{Math.round(ann.w)}</span></span>
@@ -320,10 +320,10 @@ function EmptyState({ onFiles }) {
       <div onClick={() => inputRef.current?.click()} onDragOver={e => { e.preventDefault(); setDragging(true); }} onDragLeave={() => setDragging(false)} onDrop={e => { e.preventDefault(); setDragging(false); onFiles(e.dataTransfer.files); }} style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', background: dragging ? 'rgba(245,166,35,0.02)' : 'transparent' }}>
          <input ref={inputRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={e => onFiles(e.target.files)} />
          <div style={{ width: 70, height: 70, margin: '0 auto 20px', borderRadius: 16, background: '#161c28', border: `2px dashed ${dragging ? '#f5a623' : 'rgba(255,255,255,0.16)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ fontSize: 24 }}>📁</div>
+            <div style={{ fontSize: 30 }}>📁</div>
          </div>
-         <div style={{ fontSize: 16, fontWeight: 700, color: '#f0f2f5', marginBottom: 6 }}>Drop images to annotate</div>
-         <div style={{ fontSize: 12, color: '#5a6580', marginBottom: 16 }}>or click to browse</div>
+         <div style={{ fontSize: 20, fontWeight: 700, color: '#f0f2f5', marginBottom: 6 }}>Drop images to annotate</div>
+         <div style={{ fontSize: 15, color: '#5a6580', marginBottom: 16 }}>or click to browse</div>
       </div>
    );
 }
@@ -334,8 +334,8 @@ function EmptyState({ onFiles }) {
 function SectionLabel({ children, count }) {
    return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px 8px', borderBottom: '1px solid rgba(255,255,255,0.06)', backgroundColor: '#0d1117' }}>
-         <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', color: '#3a4458', fontFamily: 'var(--font-mono)', textTransform: 'uppercase' }}>{children}</span>
-         {count > 0 && <span style={{ fontSize: 8, fontFamily: 'var(--font-mono)', background: 'rgba(245,166,35,0.12)', color: '#f5a623', border: '1px solid rgba(245,166,35,0.3)', borderRadius: 3, padding: '1px 5px' }}>{count}</span>}
+         <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: '#3a4458', fontFamily: 'var(--font-mono)', textTransform: 'uppercase' }}>{children}</span>
+         {count > 0 && <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', background: 'rgba(245,166,35,0.12)', color: '#f5a623', border: '1px solid rgba(245,166,35,0.3)', borderRadius: 3, padding: '1px 5px' }}>{count}</span>}
       </div>
    );
 }
@@ -349,7 +349,7 @@ function IconBtn({ onClick, title, variant, children }) {
    const isPrimary = variant === 'primary';
 
    return (
-      <button onClick={onClick} title={title} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 11px', borderRadius: '4px', border: `1px solid ${hov && isDanger ? 'rgba(224,92,92,0.4)' : hov && isPrimary ? 'rgba(245,166,35,0.3)' : 'rgba(255,255,255,0.06)'}`, background: hov && isDanger ? 'rgba(224,92,92,0.1)' : hov && isPrimary ? 'rgba(245,166,35,0.12)' : '#161c28', color: hov && isDanger ? '#e05c5c' : hov && isPrimary ? '#f5a623' : '#9ba8bc', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-display)' }}>{children}</button>
+      <button onClick={onClick} title={title} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 11px', borderRadius: '4px', border: `1px solid ${hov && isDanger ? 'rgba(224,92,92,0.4)' : hov && isPrimary ? 'rgba(245,166,35,0.3)' : 'rgba(255,255,255,0.06)'}`, background: hov && isDanger ? 'rgba(224,92,92,0.1)' : hov && isPrimary ? 'rgba(245,166,35,0.12)' : '#161c28', color: hov && isDanger ? '#e05c5c' : hov && isPrimary ? '#f5a623' : '#9ba8bc', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-display)' }}>{children}</button>
    );
 }
 
@@ -365,14 +365,14 @@ export default function App() {
    return (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#080a0e', fontFamily: 'var(--font-display)' }}>
          {/* HEADER */}
-         <header style={{ height: 48, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 18px', borderBottom: '1px solid rgba(255,255,255,0.06)', background: '#0d1117', zIndex: 10 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-               <img src="/logo.png" alt="XIS Labs" style={{ height: 28, width: 'auto', objectFit: 'contain' }} />
-               <span style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: '#3a4458', fontWeight: 500 }}>Annotator</span>
-               <span style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: '#5a6580', marginLeft: 4 }}>{ann.images.length} images · {totalBoxes} boxes</span>
+         <header style={{ height: 72, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px', borderBottom: '1px solid rgba(255,255,255,0.06)', background: '#0d1117', zIndex: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+               <img src="/logo.png" alt="XIS Labs" style={{ height: 36, width: 'auto', objectFit: 'contain' }} />
+               <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: '#3a4458', fontWeight: 600 }}>Annotator</span>
+               <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: '#5a6580', marginLeft: 6 }}>{ann.images.length} images · {totalBoxes} boxes</span>
             </div>
             <div style={{ display: 'flex', gap: 6 }}>
-               {ann.activeImage?.name && <span style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: '#3a4458' }}>{ann.activeImage.name}</span>}
+               {ann.activeImage?.name && <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: '#3a4458' }}>{ann.activeImage.name}</span>}
                {ann.activeImage?.annotations?.length > 0 && <IconBtn onClick={ann.clearAnnotations} variant="danger">Clear</IconBtn>}
                <IconBtn onClick={ann.exportJSON} variant="primary">Export JSON</IconBtn>
             </div>
@@ -409,9 +409,9 @@ export default function App() {
                   <AnnotationList annotations={ann.activeImage?.annotations || []} onDelete={ann.deleteAnnotation} onLabelChange={ann.updateLabel} onHover={setHoveredId} />
                </div>
                <div style={{ padding: '12px 14px', borderTop: '1px solid rgba(255,255,255,0.06)', background: '#080a0e' }}>
-                  <div style={{ fontSize: 8, fontFamily: 'var(--font-mono)', color: '#3a4458', marginBottom: 8, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Shortcuts</div>
+                  <div style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: '#3a4458', marginBottom: 8, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Shortcuts</div>
                   {[['Drag', 'Draw box'], ['Click label', 'Rename'], ['✕ button', 'Delete']].map(([k, v]) => (
-                     <div key={k} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: 9 }}>
+                     <div key={k} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: 11 }}>
                         <span style={{ fontFamily: 'var(--font-mono)', color: '#5a6580', background: '#161c28', padding: '2px 5px', borderRadius: 2, border: '1px solid rgba(255,255,255,0.06)' }}>{k}</span>
                         <span style={{ color: '#3a4458', fontFamily: 'var(--font-mono)' }}>{v}</span>
                      </div>
@@ -421,7 +421,7 @@ export default function App() {
          </div>
 
          {/* STATUS */}
-         <div style={{ height: 26, display: 'flex', alignItems: 'center', padding: '0 16px', borderTop: '1px solid rgba(255,255,255,0.06)', background: '#0d1117', fontSize: 9, fontFamily: 'var(--font-mono)', color: '#3a4458' }}>
+         <div style={{ height: 26, display: 'flex', alignItems: 'center', padding: '0 16px', borderTop: '1px solid rgba(255,255,255,0.06)', background: '#0d1117', fontSize: 11, fontFamily: 'var(--font-mono)', color: '#3a4458' }}>
             {ann.activeImage ? `${ann.activeImage.annotations.length} annotations · drag to draw` : 'Drop images to start'}
             <div style={{ flex: 1 }} />
             <span style={{ color: '#f5a623', opacity: 0.5 }}>v1.0</span>
