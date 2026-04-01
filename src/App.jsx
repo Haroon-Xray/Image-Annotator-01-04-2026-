@@ -9,7 +9,7 @@ const GLOBAL_CSS = `
     --bg-0: #080a0e; --bg-1: #0d1117; --bg-3: #161c28; --bg-4: #1c2333;
     --border: rgba(255,255,255,0.06); --text-0: #f0f2f5; --text-1: #9ba8bc; --text-2: #5a6580; --text-3: #3a4458;
     --amber: #f5a623; --amber-dim: rgba(245,166,35,0.12); --red: #e05c5c;
-    --font-display: 'Syne', sans-serif; --font-mono: 'Space Mono', monospace;
+    --font-display: 'Inter', sans-serif; --font-mono: 'JetBrains Mono', monospace;
   }
   html, body, #root { height: 100%; width: 100%; overflow: hidden; }
   body { background: var(--bg-0); color: var(--text-0); font-family: var(--font-display); }
@@ -366,12 +366,10 @@ export default function App() {
       <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#080a0e', fontFamily: 'var(--font-display)' }}>
          {/* HEADER */}
          <header style={{ height: 48, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 18px', borderBottom: '1px solid rgba(255,255,255,0.06)', background: '#0d1117', zIndex: 10 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-               <div style={{ width: 26, height: 26, borderRadius: 6, background: '#f5a623', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <span style={{ fontSize: 16, fontWeight: 800 }}>■</span>
-               </div>
-               <span style={{ fontSize: 14, fontWeight: 800, color: '#f0f2f5' }}>AnnotateAI</span>
-               <span style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: '#5a6580' }}>{ann.images.length} images · {totalBoxes} boxes</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+               <img src="/logo.png" alt="XIS Labs" style={{ height: 28, width: 'auto', objectFit: 'contain' }} />
+               <span style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: '#3a4458', fontWeight: 500 }}>Annotator</span>
+               <span style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: '#5a6580', marginLeft: 4 }}>{ann.images.length} images · {totalBoxes} boxes</span>
             </div>
             <div style={{ display: 'flex', gap: 6 }}>
                {ann.activeImage?.name && <span style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: '#3a4458' }}>{ann.activeImage.name}</span>}
