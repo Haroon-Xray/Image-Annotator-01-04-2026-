@@ -18,7 +18,6 @@ A complete, production-ready Image Annotator application with:
 ✅ Complete API documentation  
 ✅ Frontend integration guide  
 ✅ API testing examples  
-✅ Docker Compose setup  
 
 ### Documentation
 ✅ Comprehensive backend documentation (backenddoc.md)  
@@ -28,8 +27,6 @@ A complete, production-ready Image Annotator application with:
 ✅ Setup verification script  
 
 ### DevOps
-✅ Docker support  
-✅ Docker Compose configuration  
 ✅ Quick start scripts (.bat and .sh)  
 ✅ .gitignore for clean repository  
 
@@ -68,9 +65,7 @@ Root Project Files:
 ├── GETTING_STARTED.md                   # Quick start guide
 ├── API_TESTING_GUIDE.md                 # API reference & testing
 ├── SETUP_CHECKLIST.md                   # Verification checklist
-├── README_FULL.md                       # Full project README
-├── docker-compose.yml                   # Multi-container setup
-└── Dockerfile                           # Backend Docker image
+└── README_FULL.md                       # Full project README
 ```
 
 ---

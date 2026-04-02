@@ -26,7 +26,7 @@ A **complete, production-ready Django backend** for your Image Annotator with:
 ### ✅ DevOps & Tools
 - Quick-start scripts (Windows `.bat` and Unix `.sh`)
 - Verification script to check setup
-- Docker & Docker Compose support
+
 - Requirements.txt with all dependencies
 - Environment configuration templates
 
@@ -49,12 +49,7 @@ chmod +x quick-start.sh
 python manage.py runserver
 ```
 
-### Option 3: Docker (Easiest)
-```bash
-docker-compose up -d
-```
-
-### Option 4: Manual Setup (Detailed)
+### Option 3: Manual Setup (Detailed)
 Follow: **GETTING_STARTED.md**
 
 ---
@@ -139,7 +134,7 @@ UTILITY:
 ✅ 3000+ lines covering everything
 
 ### Utilities & Config
-✅ Setup scripts, verification tools, Docker files, environment templates
+✅ Setup scripts, verification tools, environment templates
 
 ### Total: 20+ files, production-ready backend
 
@@ -147,7 +142,7 @@ UTILITY:
 
 ## ⚡ Next Steps
 
-1. **Choose your setup method** (Quick-start or Docker is fastest)
+1. **Choose your setup method** (Quick-start is fastest)
 2. **Run the setup** (5-10 minutes)
 3. **Verify it works** (run `python verify_setup.py`)
 4. **Read documentation** (start with GETTING_STARTED.md)
@@ -160,14 +155,14 @@ UTILITY:
 
 ✅ **Production-Ready** - Secure, tested, scalable architecture  
 ✅ **Well-Documented** - 3000+ lines of guides and references  
-✅ **Easy Setup** - One-click scripts or Docker  
+✅ **Easy Setup** - One-click scripts for quick setup  
 ✅ **Complete API** - 16 endpoints fully documented  
 ✅ **Admin Panel** - Built-in Django admin  
 ✅ **Database Ready** - Migrations included  
 ✅ **CORS Enabled** - Connected to frontend  
 ✅ **Error Handling** - Proper validation & responses  
 ✅ **Testing Examples** - Unit tests included  
-✅ **DevOps Friendly** - Docker, scripts, verification tools  
+✅ **DevOps Friendly** - Scripts, verification tools, environment templates  
 
 ---
 

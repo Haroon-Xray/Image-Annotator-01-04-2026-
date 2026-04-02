@@ -126,10 +126,6 @@ Image-Annotator-01-04-2026/
 │   │   ├── App.jsx                     Main component
 │   │   └── index.css                   Styles
 │   └── package.json                    Dependencies
-│
-└── Docker Support
-    ├── docker-compose.yml              Multi-container
-    └── Dockerfile                      Backend image
 ```
 
 ---
@@ -142,18 +138,13 @@ Image-Annotator-01-04-2026/
 3. Verify: `python verify_setup.py`
 4. Done! Start working
 
-### Path 2: Docker (10 minutes)
-1. Have Docker installed
-2. Run: `docker-compose up -d`
-3. Access: http://localhost:5173 and http://localhost:8000
-
-### Path 3: Detailed Setup (30 minutes)
+### Path 2: Detailed Setup (30 minutes)
 1. Read: [backenddoc.md](./backenddoc.md) - Installation section
 2. Follow each step carefully
 3. Run verification checklist
 4. Read through API documentation
 
-### Path 4: Manual Configuration (45 minutes)
+### Path 3: Manual Configuration (45 minutes)
 1. Study: [backenddoc.md](./backenddoc.md) - Complete guide
 2. Understand: Database schema and models
 3. Configure: Environment and settings
@@ -279,12 +270,6 @@ python manage.py createsuperuser
 npm install
 npm run dev
 npm run build
-```
-
-### Docker
-```bash
-docker-compose up -d
-docker-compose down
 ```
 
 ---

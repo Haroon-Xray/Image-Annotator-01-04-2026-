@@ -341,20 +341,6 @@ SQLite database is stored in `backend/db.sqlite3`
 2. Open `backend/db.sqlite3`
 3. Browse tables and data
 
-## Docker Alternative
-
-If you prefer containerization:
-
-```bash
-# From project root
-docker-compose up -d
-
-# Access
-# Frontend: http://localhost:5173
-# Backend: http://localhost:8000
-# Admin: http://localhost:8000/admin/
-```
-
 ## Getting Help
 
 1. **Check Documentation:**

@@ -115,11 +115,6 @@ A **complete, production-ready Django backend** for the Image Annotator has been
 - `verify_setup.py` - Comprehensive verification script
 - `setup.py` - Alternative setup automation
 
-✅ **Docker Support:**
-- `docker-compose.yml` - Full stack definition
-- `Dockerfile` - Backend containerization
-- `frontend/Dockerfile` - Frontend containerization
-
 ✅ **Configuration:**
 - `.env.example` - Environment template
 - `.gitignore` - Proper version control
@@ -237,13 +232,6 @@ pip install -r requirements.txt
 python manage.py migrate
 python manage.py createsuperuser
 python manage.py runserver
-```
-
-### Option 3: Docker
-
-```bash
-docker-compose up -d
-# Access at http://localhost:8000 and http://localhost:5173
 ```
 
 ---

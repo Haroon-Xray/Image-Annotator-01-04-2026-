@@ -38,7 +38,6 @@
 ✅ AUTOMATION & TOOLS
    ├─ Setup scripts (Windows .bat & Unix .sh)
    ├─ Verification script (Python)
-   ├─ Docker Compose configuration
    ├─ Environment templates
    └─ Git ignore rules
 
@@ -79,11 +78,7 @@ OPTION 2: SUPER QUICK (Mac/Linux)
   2. chmod +x quick-start.sh && ./quick-start.sh
   3. Done! Server running at http://localhost:8000
 
-OPTION 3: DOCKER (Easiest)
-  1. docker-compose up -d
-  2. Done! Access at http://localhost:8000
-
-OPTION 4: MANUAL SETUP
+OPTION 3: MANUAL SETUP
   1. Read: GETTING_STARTED.md
   2. Follow step-by-step instructions
   3. Takes ~20 minutes
@@ -145,7 +140,6 @@ DOCUMENTATION FEATURES
   ✅ Quick reference summaries
 
 DEVOPS FEATURES
-  ✅ Docker Compose support
   ✅ Quick-start scripts
   ✅ Verification tools
   ✅ Environment configuration
@@ -217,16 +211,9 @@ backend/
 2️⃣ Choose Your Path:
 
    🟢 Super Quick Setup (5 min)
-      File: quick-start.bat (Windows) or quick-start.sh (Mac/Linux)
-      Then: python manage.py runserver
-
    🟡 Detailed Setup (20 min)
       File: GETTING_STARTED.md
       Follow: Step-by-step instructions
-
-   🔵 Docker Setup (10 min)
-      Command: docker-compose up -d
-      Done!
 
 3️⃣ Verify Everything Works
    Command: python verify_setup.py
@@ -279,10 +266,6 @@ TESTING & ADMIN
   python manage.py test             Run tests
   http://localhost:8000/admin/      Admin panel
   http://localhost:8000/api/        API base
-
-DOCKER
-  docker-compose up -d              Start all services
-  docker-compose down               Stop services
 
 ┌────────────────────────────────────────────────────────────────────────────┐
 │ 📍 URLs AFTER RUNNING SERVER                                               │
@@ -380,7 +363,6 @@ DOCUMENTATION_INDEX.md
 STEP 1: Choose Setup Method
   □ Windows: Run quick-start.bat
   □ Mac/Linux: Run ./quick-start.sh
-  □ Docker: Run docker-compose up -d
   □ Manual: Read GETTING_STARTED.md
 
 STEP 2: Verify It Works

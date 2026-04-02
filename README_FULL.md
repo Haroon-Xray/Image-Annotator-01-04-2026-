@@ -79,23 +79,7 @@ npm install
 npm run dev
 ```
 
-### Option 2: Docker (Easiest)
-
-```bash
-# Clone repository
-git clone https://github.com/Haroon-Xray/Image-Annotator-01-04-2026-.git
-cd Image-Annotator-01-04-2026-
-
-# Run with Docker Compose
-docker-compose up -d
-
-# Access
-# Frontend: http://localhost:5173
-# Backend: http://localhost:8000
-# Admin: http://localhost:8000/admin
-```
-
-### Option 3: Manual Setup
+### Option 2: Manual Setup
 
 See detailed instructions in:
 - Backend: [Backend Documentation](./backenddoc.md)
@@ -195,12 +179,9 @@ Image-Annotator-01-04-2026/
 │   ├── index.html                 # HTML template
 │   ├── package.json               # Dependencies
 │   ├── vite.config.js             # Vite configuration
-│   └── Dockerfile                 # Docker configuration
 │
 ├── backenddoc.md                    # Backend documentation (comprehensive)
 ├── FRONTEND_INTEGRATION.md          # Frontend integration guide
-├── docker-compose.yml              # Docker Compose configuration
-├── Dockerfile                       # Backend Docker image
 └── README.md                        # This file
 ```
 
@@ -253,24 +234,6 @@ GET    /api/health/                      # Health check
 ```
 
 For complete API documentation, see [backenddoc.md](./backenddoc.md#api-endpoints)
-
-## 🐳 Docker Support
-
-### Run with Docker Compose
-```bash
-docker-compose up -d
-```
-
-### Individual Docker Commands
-```bash
-# Build and run backend
-docker build -f Dockerfile -t image-annotator-backend .
-docker run -p 8000:8000 image-annotator-backend
-
-# Build and run frontend
-docker build -f frontend/Dockerfile -t image-annotator-frontend .
-docker run -p 5173:5173 image-annotator-frontend
-```
 
 ## 🧪 Testing
 
