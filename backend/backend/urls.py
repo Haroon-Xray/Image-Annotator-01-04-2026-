@@ -8,8 +8,24 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from django.http import JsonResponse
+
+def home(request):
+    """Home page - API welcome message"""
+    return JsonResponse({
+        'message': 'Welcome to Image Annotator API',
+        'status': 'running',
+        'endpoints': {
+            'admin': 'http://localhost:8000/admin/',
+            'api': 'http://localhost:8000/api/',
+            'health': 'http://localhost:8000/api/health/',
+            'images': 'http://localhost:8000/api/images/',
+        },
+        'documentation': 'See ./backenddoc.md for complete API documentation'
+    })
 
 urlpatterns = [
+    path('', home, name='home'),
     path('admin/', admin.site.urls),
     path('api/', include('annotator.urls')),
 ]
