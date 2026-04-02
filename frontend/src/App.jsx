@@ -77,9 +77,9 @@ function useAnnotations() {
                   formData.append('name', file.name);
                   formData.append('image_file', file);
                   formData.append('size', file.size);
-                  
+
                   const response = await imageAPI.uploadImage(formData);
-                  
+
                   resolve({
                      id: response.data.id,
                      name: response.data.name,
@@ -127,7 +127,7 @@ function useAnnotations() {
                }).then(res => {
                   // Update the local annotation with the backend ID
                   setImages(p => p.map((im, j) =>
-                     j === activeIdx 
+                     j === activeIdx
                         ? { ...im, annotations: im.annotations.map(a => a.id === newAnn.id ? { ...a, dbId: res.data.id } : a) }
                         : im
                   ));
