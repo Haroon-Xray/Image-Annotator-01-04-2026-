@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { imageAPI, annotationAPI } from './api.js';
 
 // ==============================================================
 // GLOBAL CSS
@@ -29,18 +30,76 @@ function injectStyles() {
 function useAnnotations() {
    const [images, setImages] = useState([]);
    const [activeIdx, setActiveIdx] = useState(-1);
+   const [loading, setLoading] = useState(false);
+
+   // Load images from backend on mount
+   useEffect(() => {
+      loadImagesFromBackend();
+   }, []);
+
+   const loadImagesFromBackend = async () => {
+      try {
+         setLoading(true);
+         const response = await imageAPI.getImages();
+         const backendImages = response.data.map(img => ({
+            id: img.id,
+            name: img.name,
+            src: img.image_file,
+            size: img.size,
+            dbId: img.id,
+            annotations: img.annotations.map(ann => ({
+               id: ann.id,
+               label: ann.label,
+               x: ann.x,
+               y: ann.y,
+               w: ann.width,
+               h: ann.height,
+               dbId: ann.id,
+            })),
+         }));
+         setImages(backendImages);
+         if (backendImages.length > 0) setActiveIdx(0);
+      } catch (error) {
+         console.error('Error loading images:', error);
+      } finally {
+         setLoading(false);
+      }
+   };
 
    const addImages = useCallback((files) => {
       const readers = [...files].filter(f => f.type.startsWith('image/')).map(file =>
          new Promise(resolve => {
             const reader = new FileReader();
-            reader.onload = e => resolve({
-               id: Math.random().toString(36).slice(2),
-               name: file.name,
-               src: e.target.result,
-               annotations: [],
-               size: file.size,
-            });
+            reader.onload = async e => {
+               try {
+                  // Upload to backend
+                  const formData = new FormData();
+                  formData.append('name', file.name);
+                  formData.append('image_file', file);
+                  formData.append('size', file.size);
+                  
+                  const response = await imageAPI.uploadImage(formData);
+                  
+                  resolve({
+                     id: response.data.id,
+                     name: response.data.name,
+                     src: response.data.image_file,
+                     annotations: [],
+                     size: response.data.size,
+                     dbId: response.data.id,
+                  });
+               } catch (error) {
+                  console.error('Error uploading image:', error);
+                  // Fallback to local storage
+                  resolve({
+                     id: Math.random().toString(36).slice(2),
+                     name: file.name,
+                     src: e.target.result,
+                     annotations: [],
+                     size: file.size,
+                  });
+               }
+            };
             reader.readAsDataURL(file);
          })
       );
@@ -54,17 +113,45 @@ function useAnnotations() {
    }, []);
 
    const addAnnotation = useCallback((ann) => {
-      setImages(prev => prev.map((img, i) =>
-         i === activeIdx
-            ? { ...img, annotations: [...img.annotations, { id: Math.random().toString(36).slice(2), ...ann, label: `Object ${img.annotations.length + 1}` }] }
-            : img
-      ));
+      setImages(prev => prev.map((img, i) => {
+         if (i === activeIdx) {
+            const newAnn = { id: Math.random().toString(36).slice(2), ...ann, label: `Object ${img.annotations.length + 1}` };
+            // Save to backend if image has dbId
+            if (img.dbId) {
+               annotationAPI.createAnnotation(img.dbId, {
+                  label: newAnn.label,
+                  x: Math.round(newAnn.x),
+                  y: Math.round(newAnn.y),
+                  width: Math.round(newAnn.w),
+                  height: Math.round(newAnn.h),
+               }).then(res => {
+                  // Update the local annotation with the backend ID
+                  setImages(p => p.map((im, j) =>
+                     j === activeIdx 
+                        ? { ...im, annotations: im.annotations.map(a => a.id === newAnn.id ? { ...a, dbId: res.data.id } : a) }
+                        : im
+                  ));
+               }).catch(err => console.error('Error saving annotation:', err));
+            }
+            return { ...img, annotations: [...img.annotations, newAnn] };
+         }
+         return img;
+      }));
    }, [activeIdx]);
 
    const deleteAnnotation = useCallback((annId) => {
-      setImages(prev => prev.map((img, i) =>
-         i === activeIdx ? { ...img, annotations: img.annotations.filter(a => a.id !== annId) } : img
-      ));
+      setImages(prev => prev.map((img, i) => {
+         if (i === activeIdx) {
+            const annToDelete = img.annotations.find(a => a.id === annId);
+            // Delete from backend if it has dbId
+            if (annToDelete?.dbId && img.dbId) {
+               annotationAPI.deleteAnnotation(img.dbId, annToDelete.dbId)
+                  .catch(err => console.error('Error deleting annotation:', err));
+            }
+            return { ...img, annotations: img.annotations.filter(a => a.id !== annId) };
+         }
+         return img;
+      }));
    }, [activeIdx]);
 
    const clearAnnotations = useCallback(() => {
@@ -81,6 +168,12 @@ function useAnnotations() {
 
    const removeImage = useCallback((idx) => {
       setImages(prev => {
+         const imgToDelete = prev[idx];
+         // Delete from backend if it has dbId
+         if (imgToDelete?.dbId) {
+            imageAPI.deleteImage(imgToDelete.dbId)
+               .catch(err => console.error('Error deleting image:', err));
+         }
          const next = prev.filter((_, i) => i !== idx);
          setActiveIdx(ai => {
             if (next.length === 0) return -1;
