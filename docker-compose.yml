@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  # Django Backend
+  backend:
+    build: ./backend
+    container_name: image-annotator-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - backend-media:/app/media
+    environment:
+      - DEBUG=True
+      - SECRET_KEY=docker-secret-key-change-in-production
+      - ALLOWED_HOSTS=localhost,127.0.0.1,backend
+      - DATABASE_URL=sqlite:////app/db.sqlite3
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py collectstatic --noinput &&
+             python manage.py runserver 0.0.0.0:8000"
+    depends_on:
+      - db
+    networks:
+      - app-network
+
+  # PostgreSQL Database (Optional - uncomment to use)
+  db:
+    image: postgres:13
+    container_name: image-annotator-db
+    environment:
+      - POSTGRES_DB=image_annotator
+      - POSTGRES_USER=annotator
+      - POSTGRES_PASSWORD=annotator_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+    profiles:
+      - postgres
+
+  # Frontend (Optional)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: image-annotator-frontend
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:8000/api
+    depends_on:
+      - backend
+    networks:
+      - app-network
+
+volumes:
+  backend-media:
+  postgres_data:
+
+networks:
+  app-network:
+    driver: bridge
