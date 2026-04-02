@@ -58,6 +58,7 @@ volumes:
   backend-media:
   postgres_data:
 
+
 networks:
   app-network:
     driver: bridge

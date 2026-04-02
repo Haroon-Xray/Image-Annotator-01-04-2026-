@@ -4,9 +4,9 @@ WORKDIR /app
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
-    gcc \
-    libc-dev \
-    && rm -rf /var/lib/apt/lists/*
+   gcc \
+   libc-dev \
+   && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements
 COPY backend/requirements.txt .
