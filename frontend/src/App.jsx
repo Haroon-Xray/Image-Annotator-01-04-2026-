@@ -64,6 +64,7 @@ export default function App() {
         <div className={styles.center}>
           <Toolbar
             tool={tool} setTool={setTool} imageName={activeImage?.name}
+            hasAnnotations={activeAnnotations.length > 0}
             onUndo={() => {
               if (activeImageId && activeAnnotations.length > 0)
                 deleteAnnotation(activeImageId, activeAnnotations[activeAnnotations.length - 1].id)

@@ -1,7 +1,7 @@
 import React from 'react'
 import styles from './Toolbar.module.css'
 
-export default function Toolbar({ tool, setTool, onUndo, onClearAll, imageName }) {
+export default function Toolbar({ tool, setTool, onUndo, onClearAll, imageName, hasAnnotations }) {
   return (
     <div className={styles.toolbar}>
       <div className={styles.tools}>
@@ -36,7 +36,10 @@ export default function Toolbar({ tool, setTool, onUndo, onClearAll, imageName }
       </div>
       {imageName && <div className={styles.filename}>{imageName}</div>}
       <div className={styles.hint}>
-        {tool === 'draw' ? 'Click & drag to draw · Scroll to zoom' : 'Click to select · Drag to move / resize'}
+        {hasAnnotations 
+          ? '🔒 Zoom locked · Edit boxes or Clear to re-zoom'
+          : (tool === 'draw' ? 'Click & drag to draw · Scroll to zoom' : 'Click to select · Drag to move / resize')
+        }
       </div>
     </div>
   )

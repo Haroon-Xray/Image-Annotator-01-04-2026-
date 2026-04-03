@@ -133,9 +133,12 @@ export default function AnnotationCanvas({ image, annotations, selectedBoxId, on
    }, [drawing, dragging, imgRect, onAddBox])
 
    const handleWheel = useCallback((e) => {
+      // Only allow zoom if no annotations have been drawn yet
+      if (annotations.length > 0) return
+      
       e.preventDefault()
       setZoom(z => Math.max(0.25, Math.min(4, z - e.deltaY * 0.001)))
-   }, [])
+   }, [annotations.length])
 
    if (!image) {
       return (
@@ -166,7 +169,14 @@ export default function AnnotationCanvas({ image, annotations, selectedBoxId, on
          </div>
 
          {imgRect && (
-            <svg className={styles.svg} style={{ left: imgRect.x, top: imgRect.y, width: imgRect.w, height: imgRect.h }}>
+            <svg className={styles.svg} style={{ 
+               left: imgRect.x, 
+               top: imgRect.y, 
+               width: imgRect.w, 
+               height: imgRect.h,
+               transform: `scale(${zoom})`,
+               transformOrigin: '0 0'
+            }}>
                {annotations.map(box => {
                   const bx = box.x * imgRect.w, by = box.y * imgRect.h
                   const bw = box.w * imgRect.w, bh = box.h * imgRect.h
@@ -196,7 +206,10 @@ export default function AnnotationCanvas({ image, annotations, selectedBoxId, on
                {Math.round(Math.max(0, (cursor.y - imgRect.y) / imgRect.h * (image.height || imgRect.h)))}
             </div>
          )}
-         <div className={styles.zoomBadge}>{Math.round(zoom * 100)}%</div>
+         <div className={styles.zoomBadge}>
+            {Math.round(zoom * 100)}%
+            {annotations.length > 0 && <span title="Zoom locked after drawing boxes"> 🔒</span>}
+         </div>
       </div>
    )
 }
