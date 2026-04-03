@@ -1,0 +1,31 @@
+.navbar {
+  height: 48px;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  flex-shrink: 0;
+}
+.brand { display: flex; align-items: center; gap: 10px; }
+.logo {
+  width: 30px; height: 30px;
+  background: var(--accent-dim);
+  border: 1px solid var(--accent-border);
+  border-radius: var(--radius-md);
+  display: flex; align-items: center; justify-content: center;
+}
+.title { font-size: 13px; font-weight: 500; color: var(--text-primary); letter-spacing: 0.01em; }
+.badge {
+  font-size: 10px; font-family: var(--font-mono);
+  background: var(--accent-dim); color: #c4b5fd;
+  border: 1px solid var(--accent-border);
+  border-radius: 20px; padding: 1px 8px;
+}
+.exportBtn {
+  font-size: 12px; font-weight: 500; padding: 6px 14px;
+  border-radius: var(--radius-md); background: transparent;
+  border: 1px solid var(--border-strong); color: var(--text-secondary); transition: all 0.15s;
+}
+.exportBtn:hover { background: var(--bg-surface); color: var(--text-primary); border-color: var(--accent-border); }

@@ -63,7 +63,7 @@ TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [
-            BASE_DIR / 'frontend_build',  # React build folder
+            BASE_DIR / 'frontend',  # React build folder (Vite output)
         ],
         'APP_DIRS': True,
         'OPTIONS': {
@@ -124,11 +124,11 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
-STATIC_URL = '/assets/'
+STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 STATICFILES_DIRS = [
-    BASE_DIR / 'frontend_build' / 'assets',  # React/Vite build assets
+    BASE_DIR / 'frontend' / 'static',  # Vite build output for assets
 ]
 
 # Media files (User uploads)
