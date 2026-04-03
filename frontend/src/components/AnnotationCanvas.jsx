@@ -30,8 +30,10 @@ export default function AnnotationCanvas({ image, annotations, selectedBoxId, on
 
    const toNorm = useCallback((cx, cy) => {
       if (!imgRect) return { x: 0, y: 0 }
-      return { x: Math.max(0, Math.min(1, (cx - imgRect.x) / imgRect.w)), y: Math.max(0, Math.min(1, (cy - imgRect.y) / imgRect.h)) }
-   }, [imgRect])
+      const adjustedX = (cx - imgRect.x) / zoom
+      const adjustedY = (cy - imgRect.y) / zoom
+      return { x: Math.max(0, Math.min(1, adjustedX / imgRect.w)), y: Math.max(0, Math.min(1, adjustedY / imgRect.h)) }
+   }, [imgRect, zoom])
 
    const toPx = useCallback((nx, ny) => {
       if (!imgRect) return { x: 0, y: 0 }
@@ -60,13 +62,15 @@ export default function AnnotationCanvas({ image, annotations, selectedBoxId, on
             for (const h of handles) {
                if (Math.abs(cx - h.x) < 7 && Math.abs(cy - h.y) < 7) {
                   onSelectBox(box.id)
-                  setDragging({ boxId: box.id, type: h.type, startX: cx, startY: cy, origBox: { ...box } })
+                  const norm = toNorm(cx, cy)
+                  setDragging({ boxId: box.id, type: h.type, startX: norm.x, startY: norm.y, origBox: { ...box } })
                   return
                }
             }
             if (cx >= p1.x && cx <= p2.x && cy >= p1.y && cy <= p2.y) {
                onSelectBox(box.id)
-               setDragging({ boxId: box.id, type: 'move', startX: cx, startY: cy, origBox: { ...box } })
+               const norm = toNorm(cx, cy)
+               setDragging({ boxId: box.id, type: 'move', startX: norm.x, startY: norm.y, origBox: { ...box } })
                return
             }
          }
@@ -78,7 +82,7 @@ export default function AnnotationCanvas({ image, annotations, selectedBoxId, on
       const norm = toNorm(cx, cy)
       setDrawing({ startX: norm.x, startY: norm.y, x: norm.x, y: norm.y, w: 0, h: 0 })
       onSelectBox(null)
-   }, [tool, annotations, imgRect, toPx, toNorm, onSelectBox, getPos])
+   }, [tool, annotations, imgRect, toPx, toNorm, onSelectBox, getPos, zoom])
 
    const handleMouseMove = useCallback((e) => {
       const { cx, cy } = getPos(e)
@@ -95,8 +99,9 @@ export default function AnnotationCanvas({ image, annotations, selectedBoxId, on
       }
 
       if (dragging && imgRect) {
-         const dx = (cx - dragging.startX) / imgRect.w
-         const dy = (cy - dragging.startY) / imgRect.h
+         const norm = toNorm(cx, cy)
+         const dx = norm.x - dragging.startX
+         const dy = norm.y - dragging.startY
          const ob = dragging.origBox
          let nb = { ...ob }
 
@@ -121,7 +126,7 @@ export default function AnnotationCanvas({ image, annotations, selectedBoxId, on
          }
          onUpdateBox(dragging.boxId, nb)
       }
-   }, [drawing, dragging, imgRect, toNorm, onUpdateBox, getPos])
+   }, [drawing, dragging, imgRect, toNorm, onUpdateBox, getPos, zoom])
 
    const handleMouseUp = useCallback(() => {
       if (drawing) {
@@ -135,7 +140,7 @@ export default function AnnotationCanvas({ image, annotations, selectedBoxId, on
    const handleWheel = useCallback((e) => {
       // Only allow zoom if no annotations have been drawn yet
       if (annotations.length > 0) return
-      
+
       e.preventDefault()
       setZoom(z => Math.max(0.25, Math.min(4, z - e.deltaY * 0.001)))
    }, [annotations.length])
@@ -169,10 +174,10 @@ export default function AnnotationCanvas({ image, annotations, selectedBoxId, on
          </div>
 
          {imgRect && (
-            <svg className={styles.svg} style={{ 
-               left: imgRect.x, 
-               top: imgRect.y, 
-               width: imgRect.w, 
+            <svg className={styles.svg} style={{
+               left: imgRect.x,
+               top: imgRect.y,
+               width: imgRect.w,
                height: imgRect.h,
                transform: `scale(${zoom})`,
                transformOrigin: '0 0'
