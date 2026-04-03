@@ -39,10 +39,22 @@ export default function AnnotationCanvas({ image, annotations, selectedBoxId, on
 
   const getPos = useCallback((e) => {
     const cr = containerRef.current.getBoundingClientRect()
-    const cx = (e.touches ? e.touches[0].clientX : e.clientX) - cr.left
-    const cy = (e.touches ? e.touches[0].clientY : e.clientY) - cr.top
+    const imgWrapper = containerRef.current.querySelector('[style*="transform"]')
+    const wrapperRect = imgWrapper?.getBoundingClientRect()
+    
+    let cx = (e.touches ? e.touches[0].clientX : e.clientX) - cr.left
+    let cy = (e.touches ? e.touches[0].clientY : e.clientY) - cr.top
+    
+    // Account for zoom transform centered at image center
+    if (wrapperRect && zoom !== 1 && zoom) {
+      const wrapperCenterX = wrapperRect.left - cr.left + wrapperRect.width / 2
+      const wrapperCenterY = wrapperRect.top - cr.top + wrapperRect.height / 2
+      cx = (cx - wrapperCenterX) / zoom + wrapperCenterX
+      cy = (cy - wrapperCenterY) / zoom + wrapperCenterY
+    }
+    
     return { cx, cy }
-  }, [])
+  }, [zoom])
 
   const handleMouseDown = useCallback((e) => {
     if (e.button !== 0) return
@@ -162,32 +174,32 @@ export default function AnnotationCanvas({ image, annotations, selectedBoxId, on
     >
       <div className={styles.imageWrapper} style={{ transform: `scale(${zoom})` }}>
         <img ref={imgRef} src={image.url} alt={image.name} className={styles.image} draggable={false} />
-
-        {imgRect && (
-          <svg className={styles.svg} style={{ left: imgRect.x, top: imgRect.y, width: imgRect.w, height: imgRect.h }}>
-            {annotations.map(box => {
-              const bx = box.x * imgRect.w, by = box.y * imgRect.h
-              const bw = box.w * imgRect.w, bh = box.h * imgRect.h
-              const isSel = box.id === selectedBoxId
-              return (
-                <g key={box.id}>
-                  <rect x={bx} y={by} width={bw} height={bh} fill={`${box.color}18`} stroke={box.color} strokeWidth={isSel ? 2 : 1.5} rx="2"/>
-                  <rect x={bx} y={by - 18} width={box.label.length * 6.5 + 12} height={17} rx="3" fill={box.color}/>
-                  <text x={bx + 6} y={by - 5} fontSize="9" fill="white" fontFamily="DM Mono, monospace" fontWeight="500">{box.label}</text>
-                  {isSel && [[bx,by],[bx+bw,by],[bx,by+bh],[bx+bw,by+bh]].map(([hx,hy],i) => (
-                    <rect key={i} x={hx-4} y={hy-4} width={8} height={8} rx="1" fill="white" stroke={box.color} strokeWidth="1.5"
-                      style={{ cursor: ['nw-resize','ne-resize','sw-resize','se-resize'][i] }}/>
-                  ))}
-                </g>
-              )
-            })}
-            {drawing && (
-              <rect x={drawing.x*imgRect.w} y={drawing.y*imgRect.h} width={drawing.w*imgRect.w} height={drawing.h*imgRect.h}
-                fill="rgba(124,106,247,0.1)" stroke="#7c6af7" strokeWidth="1.5" strokeDasharray="5 3" rx="2"/>
-            )}
-          </svg>
-        )}
       </div>
+
+      {imgRect && (
+        <svg className={styles.svg} style={{ left: imgRect.x, top: imgRect.y, width: imgRect.w, height: imgRect.h }}>
+          {annotations.map(box => {
+            const bx = box.x * imgRect.w, by = box.y * imgRect.h
+            const bw = box.w * imgRect.w, bh = box.h * imgRect.h
+            const isSel = box.id === selectedBoxId
+            return (
+              <g key={box.id}>
+                <rect x={bx} y={by} width={bw} height={bh} fill={`${box.color}18`} stroke={box.color} strokeWidth={isSel ? 2 : 1.5} rx="2"/>
+                <rect x={bx} y={by - 18} width={box.label.length * 6.5 + 12} height={17} rx="3" fill={box.color}/>
+                <text x={bx + 6} y={by - 5} fontSize="9" fill="white" fontFamily="DM Mono, monospace" fontWeight="500">{box.label}</text>
+                {isSel && [[bx,by],[bx+bw,by],[bx,by+bh],[bx+bw,by+bh]].map(([hx,hy],i) => (
+                  <rect key={i} x={hx-4} y={hy-4} width={8} height={8} rx="1" fill="white" stroke={box.color} strokeWidth="1.5"
+                    style={{ cursor: ['nw-resize','ne-resize','sw-resize','se-resize'][i] }}/>
+                ))}
+              </g>
+            )
+          })}
+          {drawing && (
+            <rect x={drawing.x*imgRect.w} y={drawing.y*imgRect.h} width={drawing.w*imgRect.w} height={drawing.h*imgRect.h}
+              fill="rgba(124,106,247,0.1)" stroke="#7c6af7" strokeWidth="1.5" strokeDasharray="5 3" rx="2"/>
+          )}
+        </svg>
+      )}
 
       {cursor.visible && imgRect && (
         <div className={styles.coords}>
