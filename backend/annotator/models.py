@@ -1,5 +1,5 @@
 from django.db import models
-from django.core.validators import FileExtensionValidator
+from django.core.validators import FileExtensionValidator, MinValueValidator, MaxValueValidator
 from django.utils import timezone
 
 class Image(models.Model):
@@ -35,10 +35,31 @@ class Annotation(models.Model):
         related_name='annotations'
     )
     label = models.CharField(max_length=255)
-    x = models.IntegerField(help_text="X coordinate of top-left corner")
-    y = models.IntegerField(help_text="Y coordinate of top-left corner")
-    width = models.IntegerField(help_text="Width of bounding box")
-    height = models.IntegerField(help_text="Height of bounding box")
+    class_id = models.IntegerField(default=0, help_text="Class ID for YOLO format (0-indexed)")
+    # Normalized coordinates (0-1)
+    x_center = models.FloatField(
+        default=0.5,
+        validators=[MinValueValidator(0.0), MaxValueValidator(1.0)],
+        help_text="Normalized center X coordinate (0-1)"
+    )
+    y_center = models.FloatField(
+        default=0.5,
+        validators=[MinValueValidator(0.0), MaxValueValidator(1.0)],
+        help_text="Normalized center Y coordinate (0-1)"
+    )
+    width = models.FloatField(
+        default=0.5,
+        validators=[MinValueValidator(0.0), MaxValueValidator(1.0)],
+        help_text="Normalized width (0-1)"
+    )
+    height = models.FloatField(
+        default=0.5,
+        validators=[MinValueValidator(0.0), MaxValueValidator(1.0)],
+        help_text="Normalized height (0-1)"
+    )
+    # Legacy pixel coordinates (kept for backward compatibility)
+    x = models.IntegerField(default=0, help_text="X coordinate of top-left corner (legacy)")
+    y = models.IntegerField(default=0, help_text="Y coordinate of top-left corner (legacy)")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     

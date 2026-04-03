@@ -36,7 +36,15 @@ export function useAnnotations() {
 
   const addAnnotation = useCallback((imageId, box) => {
     const color = BOX_COLORS[(annotations[imageId]?.length || 0) % BOX_COLORS.length]
-    const newBox = { id: genId(), label: 'object', color, ...box }
+    const newBox = { 
+      id: genId(), 
+      label: 'object', 
+      class_id: 0,
+      color, 
+      x: 0,
+      y: 0,
+      ...box 
+    }
     setAnnotations(prev => ({ ...prev, [imageId]: [...(prev[imageId] || []), newBox] }))
     setSelectedBoxId(newBox.id)
   }, [annotations])

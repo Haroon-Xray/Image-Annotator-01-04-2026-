@@ -11,8 +11,11 @@ from .serializers import (
     ImageListSerializer,
     AnnotationSerializer,
     AnnotationCreateSerializer,
-    ExportSerializer
+    ExportSerializer,
+    BulkImageAnnotationSerializer,
+    YOLODatasetGeneratorSerializer
 )
+from .yolo_utils import YOLOConverter
 
 
 class ReactAppView(TemplateView):
@@ -127,6 +130,122 @@ class ImageViewSet(viewsets.ModelViewSet):
             'updated_at': image.updated_at.isoformat()
         }
         return Response(stats, status=status.HTTP_200_OK)
+    
+    @action(detail=False, methods=['post'], url_path='bulk/annotations')
+    def bulk_annotations(self, request):
+        """
+        Bulk submit annotations for multiple images.
+        
+        Request format:
+        {
+            "images": [
+                {
+                    "image_id": 1,
+                    "annotations": [
+                        {"label": "person", "class_id": 0, "x_center": 0.5, "y_center": 0.5, "width": 0.3, "height": 0.4},
+                        ...
+                    ]
+                },
+                ...
+            ]
+        }
+        """
+        serializer = BulkImageAnnotationSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        created_annotations = []
+        results = {
+            'total_images': 0,
+            'total_annotations': 0,
+            'images_processed': [],
+            'errors': []
+        }
+        
+        for img_data in serializer.validated_data['images']:
+            image_id = img_data['image_id']
+            annotations_data = img_data['annotations']
+            
+            try:
+                image = Image.objects.get(id=image_id)
+                results['total_images'] += 1
+                
+                for ann_data in annotations_data:
+                    annotation = Annotation.objects.create(
+                        image=image,
+                        label=ann_data['label'],
+                        class_id=ann_data.get('class_id', 0),
+                        x_center=ann_data.get('x_center', 0.5),
+                        y_center=ann_data.get('y_center', 0.5),
+                        width=ann_data.get('width', 0.5),
+                        height=ann_data.get('height', 0.5),
+                        x=ann_data.get('x', 0),
+                        y=ann_data.get('y', 0)
+                    )
+                    created_annotations.append(annotation)
+                    results['total_annotations'] += 1
+                
+                results['images_processed'].append({
+                    'image_id': image_id,
+                    'annotations_count': len(annotations_data)
+                })
+                
+            except Image.DoesNotExist:
+                results['errors'].append(f"Image with id {image_id} not found")
+            except Exception as e:
+                results['errors'].append(f"Error processing image {image_id}: {str(e)}")
+        
+        return Response(results, status=status.HTTP_201_CREATED)
+    
+    @action(detail=False, methods=['post'], url_path='yolo/generate')
+    def generate_yolo_dataset(self, request):
+        """
+        Generate YOLO dataset from annotated images.
+        
+        Request format:
+        {
+            "image_ids": [1, 2, 3, ...],
+            "output_dir": "dataset" (optional)
+        }
+        
+        Creates dataset structure:
+        - dataset/images/ (containing image files)
+        - dataset/labels/ (containing .txt files in YOLO format)
+        """
+        serializer = YOLODatasetGeneratorSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        image_ids = serializer.validated_data['image_ids']
+        output_dir = serializer.validated_data.get('output_dir', 'dataset')
+        
+        if not image_ids:
+            return Response(
+                {'error': 'No image IDs provided'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            images = Image.objects.filter(id__in=image_ids)
+            
+            if not images.exists():
+                return Response(
+                    {'error': 'No images found with provided IDs'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Generate YOLO dataset
+            generation_results = YOLOConverter.generate_yolo_dataset(images, output_dir=output_dir)
+            
+            # Calculate class distribution
+            class_distribution = YOLOConverter.class_distribution(images)
+            generation_results['class_distribution'] = class_distribution
+            
+            return Response(generation_results, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response(
+                {'error': f'Failed to generate dataset: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
 class AnnotationViewSet(viewsets.ModelViewSet):

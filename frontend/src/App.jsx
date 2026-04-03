@@ -54,7 +54,12 @@ export default function App() {
 
    return (
       <div className={styles.app}>
-         <Navbar onExport={handleExport} annotationCount={totalBoxes} />
+         <Navbar 
+            onExport={handleExport} 
+            annotationCount={totalBoxes}
+            images={images}
+            hasAnnotations={totalBoxes > 0}
+         />
          <div className={styles.body}>
             <ImageSidebar
                images={images} activeImageId={activeImageId}
