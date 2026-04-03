@@ -36,7 +36,7 @@ urlpatterns = [
     path('', ReactAppView.as_view(), name='react_app'),
     
     # Catch-all for React Router - all other paths go to React
-    re_path(r'^(?!api|admin|static|media).*$', ReactAppView.as_view(), name='react_router_fallback'),
+    re_path(r'^(?!api|admin|assets|media).*$', ReactAppView.as_view(), name='react_router_fallback'),
 ]
 
 # Serve media files in development
