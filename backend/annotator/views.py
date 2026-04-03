@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from django.shortcuts import get_object_or_404
 from django.http import JsonResponse
+from django.views.generic import TemplateView
 from .models import Image, Annotation
 from .serializers import (
     ImageSerializer,
@@ -12,6 +13,18 @@ from .serializers import (
     AnnotationCreateSerializer,
     ExportSerializer
 )
+
+
+class ReactAppView(TemplateView):
+    """
+    Serve React app's index.html
+    This handles fallback for React Router - all non-API routes go to React
+    """
+    template_name = 'index.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        return context
 
 
 class ImageViewSet(viewsets.ModelViewSet):
