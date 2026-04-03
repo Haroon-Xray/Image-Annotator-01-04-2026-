@@ -40,10 +40,10 @@ export default function Navbar({ onExport, annotationCount, images, annotations,
       try {
          console.log('Starting YOLO generation process')
          console.log('Images:', images)
-         
+
          // Step 1: Upload all images if needed
          const uploadedImageIds = []
-         
+
          for (const image of images) {
             // Check if this is a local image (string ID) or already uploaded (numeric ID)
             if (typeof image.id === 'number') {
@@ -56,7 +56,7 @@ export default function Navbar({ onExport, annotationCount, images, annotations,
                   const blob = await response.blob()
                   formData.append('image_file', blob, image.name)
                   formData.append('name', image.name)
-                  
+
                   const uploadResult = await apiClient.post('/images/', formData, {
                      headers: { 'Content-Type': 'multipart/form-data' }
                   })
@@ -68,16 +68,16 @@ export default function Navbar({ onExport, annotationCount, images, annotations,
                }
             }
          }
-         
+
          console.log('Uploaded image IDs:', uploadedImageIds)
-         
+
          // Step 2: Submit bulk annotations first if any
          if (uploadedImageIds.length > 0) {
             const imageIdMap = {}
             images.forEach((img, idx) => {
                imageIdMap[img.id] = uploadedImageIds[idx]
             })
-            
+
             const bulkData = {
                images: images
                   .filter(img => annotations[img.id] && annotations[img.id].length > 0)
@@ -93,20 +93,20 @@ export default function Navbar({ onExport, annotationCount, images, annotations,
                      }))
                   }))
             }
-            
+
             if (bulkData.images.length > 0) {
                console.log('Submitting annotations before YOLO...')
                await apiClient.post('/images/bulk/annotations/', bulkData)
             }
          }
-         
+
          // Step 3: Generate YOLO dataset
          const yoloPayload = {
             image_ids: uploadedImageIds,
             output_dir: 'dataset'
          }
          console.log('YOLO payload:', yoloPayload)
-         
+
          const response = await apiClient.post('/images/yolo/generate/', yoloPayload)
          console.log('YOLO response:', response.data)
 
@@ -141,10 +141,10 @@ export default function Navbar({ onExport, annotationCount, images, annotations,
          console.log('Starting bulk submit process')
          console.log('Images:', images)
          console.log('Annotations:', annotations)
-         
+
          // Step 1: Upload all images that don't have a database ID yet
          const imageIdMap = {} // Maps local ID to database ID
-         
+
          for (const image of images) {
             // Check if this image has numeric ID (already in database)
             // or string ID like 'box_1' (local only)
@@ -159,7 +159,7 @@ export default function Navbar({ onExport, annotationCount, images, annotations,
                   const blob = await response.blob()
                   formData.append('image_file', blob, image.name)
                   formData.append('name', image.name)
-                  
+
                   // Upload image
                   const uploadResult = await apiClient.post('/images/', formData, {
                      headers: { 'Content-Type': 'multipart/form-data' }
@@ -172,9 +172,9 @@ export default function Navbar({ onExport, annotationCount, images, annotations,
                }
             }
          }
-         
+
          console.log('Image ID mapping:', imageIdMap)
-         
+
          // Step 2: Prepare bulk annotation data with correct image IDs
          const bulkData = {
             images: images
