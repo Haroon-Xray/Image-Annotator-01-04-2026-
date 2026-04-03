@@ -11,11 +11,28 @@ const api = axios.create({
    },
 })
 
+// Helper function to get CSRF token
+function getCsrfToken() {
+   // Try to get from DOM
+   let csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value
+
+   // Try to get from cookies
+   if (!csrfToken) {
+      csrfToken = document.cookie.split('; ').find(row => row.startsWith('csrftoken='))?.split('=')[1]
+   }
+
+   // Try to get from meta tag (if implemented)
+   if (!csrfToken) {
+      csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+   }
+
+   return csrfToken
+}
+
 // Interceptor to add CSRF token for POST/PUT/DELETE requests
 api.interceptors.request.use((config) => {
    if (['post', 'put', 'delete'].includes(config.method?.toLowerCase())) {
-      const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
-         document.cookie.split('; ').find(row => row.startsWith('csrftoken='))?.split('=')[1]
+      const csrfToken = getCsrfToken()
       if (csrfToken) {
          config.headers['X-CSRFToken'] = csrfToken
       }

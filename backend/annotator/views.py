@@ -1,7 +1,7 @@
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django.shortcuts import get_object_or_404
 from django.http import JsonResponse
 from django.views.generic import TemplateView
@@ -44,7 +44,7 @@ class ImageViewSet(viewsets.ModelViewSet):
     - POST /api/images/batch/export/ - Export multiple images
     """
     queryset = Image.objects.all()
-    parser_classes = (MultiPartParser, FormParser)
+    parser_classes = (JSONParser, MultiPartParser, FormParser)
     
     def get_serializer_class(self):
         """Use different serializers based on action"""

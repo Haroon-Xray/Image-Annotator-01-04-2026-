@@ -94,19 +94,24 @@
 }
 
 .status {
-   position: absolute;
-   bottom: 8px;
+   position: fixed;
+   bottom: 24px;
    right: 24px;
-   font-size: 13px;
+   font-size: 14px;
    font-weight: 500;
-   padding: 8px 14px;
+   padding: 14px 18px;
    border-radius: var(--radius-sm);
    animation: slideIn 0.2s ease;
-   z-index: 100;
-   white-space: nowrap;
-   max-width: 400px;
-   overflow: hidden;
-   text-overflow: ellipsis;
+   z-index: 1000;
+   min-width: 300px;
+   max-width: 500px;
+   word-wrap: break-word;
+   white-space: normal;
+   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+   line-height: 1.5;
+   display: flex;
+   align-items: center;
+   gap: 8px;
 }
 
 .status.success {
