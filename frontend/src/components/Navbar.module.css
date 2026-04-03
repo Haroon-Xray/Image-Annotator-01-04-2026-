@@ -7,6 +7,7 @@
    justify-content: space-between;
    padding: 0 24px;
    flex-shrink: 0;
+   position: relative;
 }
 
 .brand {
@@ -94,13 +95,18 @@
 
 .status {
    position: absolute;
-   bottom: 12px;
+   bottom: 8px;
    right: 24px;
-   font-size: 12px;
+   font-size: 13px;
    font-weight: 500;
    padding: 8px 14px;
    border-radius: var(--radius-sm);
    animation: slideIn 0.2s ease;
+   z-index: 100;
+   white-space: nowrap;
+   max-width: 400px;
+   overflow: hidden;
+   text-overflow: ellipsis;
 }
 
 .status.success {

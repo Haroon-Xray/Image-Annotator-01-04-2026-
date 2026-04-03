@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import styles from './Navbar.module.css'
 import apiClient from '../api'
 
-export default function Navbar({ onExport, annotationCount, images, hasAnnotations }) {
+export default function Navbar({ onExport, annotationCount, images, annotations, hasAnnotations }) {
    const [isExporting, setIsExporting] = useState(false)
    const [exportStatus, setExportStatus] = useState(null)
 
@@ -25,9 +25,10 @@ export default function Navbar({ onExport, annotationCount, images, hasAnnotatio
          setExportStatus(`✓ Dataset generated! ${response.data.images_copied} images, ${response.data.total_annotations} annotations`)
          setTimeout(() => setExportStatus(null), 4000)
       } catch (error) {
-         const errorMsg = error.response?.data?.error || 'Failed to generate dataset'
+         console.error('YOLO generation error:', error.response?.data || error.message)
+         const errorMsg = error.response?.data?.error || error.response?.data?.[0] || error.message || 'Failed to generate dataset'
          setExportStatus(`✗ ${errorMsg}`)
-         console.error('YOLO generation error:', error)
+         setTimeout(() => setExportStatus(null), 4000)
       } finally {
          setIsExporting(false)
       }
@@ -45,10 +46,26 @@ export default function Navbar({ onExport, annotationCount, images, hasAnnotatio
       try {
          // Prepare data for bulk submission
          const bulkData = {
-            images: images.map(img => ({
-               image_id: img.id,
-               annotations: img.annotations || []
-            }))
+            images: images
+               .filter(img => annotations[img.id] && annotations[img.id].length > 0)
+               .map(img => ({
+                  image_id: img.id,
+                  annotations: annotations[img.id].map(ann => ({
+                     label: ann.label || 'object',
+                     class_id: ann.class_id || 0,
+                     x_center: ann.x || 0.5,
+                     y_center: ann.y || 0.5,
+                     width: ann.w || 0.5,
+                     height: ann.h || 0.5
+                  }))
+               }))
+         }
+
+         if (!bulkData.images.length) {
+            setExportStatus('✗ No annotations to submit')
+            setTimeout(() => setExportStatus(null), 2000)
+            setIsExporting(false)
+            return
          }
 
          const response = await apiClient.post('/api/images/bulk/annotations/', bulkData)
@@ -56,9 +73,10 @@ export default function Navbar({ onExport, annotationCount, images, hasAnnotatio
          setExportStatus(`✓ ${response.data.total_annotations} annotations submitted across ${response.data.total_images} images`)
          setTimeout(() => setExportStatus(null), 4000)
       } catch (error) {
-         const errorMsg = error.response?.data?.error || 'Failed to submit annotations'
+         console.error('Bulk submission error:', error.response?.data || error.message)
+         const errorMsg = error.response?.data?.error || error.response?.data?.[0] || error.message || 'Failed to submit annotations'
          setExportStatus(`✗ ${errorMsg}`)
-         console.error('Bulk submission error:', error)
+         setTimeout(() => setExportStatus(null), 4000)
       } finally {
          setIsExporting(false)
       }

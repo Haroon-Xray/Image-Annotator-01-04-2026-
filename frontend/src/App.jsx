@@ -58,6 +58,7 @@ export default function App() {
             onExport={handleExport}
             annotationCount={totalBoxes}
             images={images}
+            annotations={annotations}
             hasAnnotations={totalBoxes > 0}
          />
          <div className={styles.body}>
