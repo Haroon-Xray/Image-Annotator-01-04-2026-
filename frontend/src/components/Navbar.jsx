@@ -33,7 +33,7 @@ export default function Navbar({ onExport, annotationCount, images, annotations,
       console.log('\n' + sep)
       console.log('[YOLO] Starting YOLO generation')
       console.log(sep)
-      
+
       if (!images.length || !hasAnnotations) {
          console.warn('[YOLO] Missing images or annotations')
          alert('Please upload images and add annotations first')
@@ -50,13 +50,13 @@ export default function Navbar({ onExport, annotationCount, images, annotations,
 
       try {
          console.log('[YOLO] Step 1: Uploading images if needed')
-         
+
          // Step 1: Upload all images if needed
          const uploadedImageIds = []
 
          for (const image of images) {
             console.log(`[YOLO]   Processing image: ${image.name}, ID type: ${typeof image.id}`)
-            
+
             // Check if this is a local image (string ID) or already uploaded (numeric ID)
             if (typeof image.id === 'number') {
                console.log(`[YOLO]   ✓ Image ${image.id} already uploaded`)
@@ -87,7 +87,7 @@ export default function Navbar({ onExport, annotationCount, images, annotations,
 
          // Step 2: Submit bulk annotations first if any
          console.log('[YOLO] Step 2: Submitting bulk annotations')
-         
+
          if (uploadedImageIds.length > 0) {
             const imageIdMap = {}
             images.forEach((img, idx) => {
@@ -123,7 +123,7 @@ export default function Navbar({ onExport, annotationCount, images, annotations,
 
          // Step 3: Generate YOLO dataset and download file
          console.log('[YOLO] Step 3: Generating YOLO dataset')
-         
+
          const yoloPayload = {
             image_ids: uploadedImageIds,
             output_dir: 'dataset'
@@ -171,7 +171,7 @@ export default function Navbar({ onExport, annotationCount, images, annotations,
          // Get metadata from response headers (headers are lowercase in axios)
          let imagesCount = parseInt(response.headers['x-images-count']) || uploadedImageIds.length
          let annotationsCount = parseInt(response.headers['x-total-annotations']) || 0
-         
+
          console.log('Images count from header:', imagesCount, 'type:', typeof imagesCount)
          console.log('Annotations count from header:', annotationsCount, 'type:', typeof annotationsCount)
          console.log('Final filename:', filename)
@@ -191,7 +191,7 @@ export default function Navbar({ onExport, annotationCount, images, annotations,
 
          console.log('[YOLO] ✓ File downloaded:', filename)
          setStatusWithTimeout(`✓ Dataset generated and downloaded! ${imagesCount} images, ${annotationsCount} annotations`)
-         console.log('='*50 + '\n')
+         console.log('=' * 50 + '\n')
       } catch (error) {
          console.error('=== YOLO GENERATION ERROR ===')
          console.error('Full error object:', error)
@@ -200,9 +200,9 @@ export default function Navbar({ onExport, annotationCount, images, annotations,
          console.error('Error data:', error.response?.data)
          console.error('Error config:', error.config)
          console.error('Stack:', error.stack)
-         
+
          let errorMsg = 'Failed to generate dataset'
-         
+
          // Try to extract detailed error message
          if (error.response?.data?.error) {
             errorMsg = error.response.data.error
@@ -215,7 +215,7 @@ export default function Navbar({ onExport, annotationCount, images, annotations,
          } else if (error.message) {
             errorMsg = error.message
          }
-         
+
          console.error('Final error message:', errorMsg)
          setStatusWithTimeout(`✗ ${errorMsg}`)
          console.log(sep + '\n')
