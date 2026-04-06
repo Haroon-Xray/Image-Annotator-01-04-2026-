@@ -29,27 +29,41 @@ export default function Navbar({ onExport, annotationCount, images, annotations,
    }
 
    const handleGenerateYOLO = async () => {
+      const sep = '='.repeat(70)
+      console.log('\n' + sep)
+      console.log('[YOLO] Starting YOLO generation')
+      console.log(sep)
+      
       if (!images.length || !hasAnnotations) {
+         console.warn('[YOLO] Missing images or annotations')
          alert('Please upload images and add annotations first')
          return
       }
+
+      console.log(`[YOLO] Images: ${images.length}`)
+      console.log(`[YOLO] Has annotations: ${hasAnnotations}`)
+      console.log('[YOLO] Images data:', images)
+      console.log('[YOLO] Annotations data:', annotations)
 
       setIsExporting(true)
       setStatusWithTimeout('Uploading images and generating YOLO dataset...')
 
       try {
-         console.log('Starting YOLO generation process')
-         console.log('Images:', images)
-
+         console.log('[YOLO] Step 1: Uploading images if needed')
+         
          // Step 1: Upload all images if needed
          const uploadedImageIds = []
 
          for (const image of images) {
+            console.log(`[YOLO]   Processing image: ${image.name}, ID type: ${typeof image.id}`)
+            
             // Check if this is a local image (string ID) or already uploaded (numeric ID)
             if (typeof image.id === 'number') {
+               console.log(`[YOLO]   ✓ Image ${image.id} already uploaded`)
                uploadedImageIds.push(image.id)
             } else {
                // Need to upload this image
+               console.log(`[YOLO]   ↑ Uploading image: ${image.name}`)
                const formData = new FormData()
                try {
                   const response = await fetch(image.url)
@@ -60,18 +74,20 @@ export default function Navbar({ onExport, annotationCount, images, annotations,
                   const uploadResult = await apiClient.post('/images/', formData, {
                      headers: { 'Content-Type': 'multipart/form-data' }
                   })
-                  console.log('Uploaded image:', uploadResult.data)
+                  console.log(`[YOLO]   ✓ Uploaded image: ${uploadResult.data.id}`)
                   uploadedImageIds.push(uploadResult.data.id)
                } catch (uploadErr) {
-                  console.error(`Failed to upload image ${image.name}:`, uploadErr)
+                  console.error(`[YOLO]   ✗ Upload failed: ${image.name}`, uploadErr)
                   throw new Error(`Failed to upload image: ${image.name}`)
                }
             }
          }
 
-         console.log('Uploaded image IDs:', uploadedImageIds)
+         console.log(`[YOLO] Step 1 complete. Uploaded IDs: ${uploadedImageIds.join(', ')}`)
 
          // Step 2: Submit bulk annotations first if any
+         console.log('[YOLO] Step 2: Submitting bulk annotations')
+         
          if (uploadedImageIds.length > 0) {
             const imageIdMap = {}
             images.forEach((img, idx) => {
@@ -86,43 +102,123 @@ export default function Navbar({ onExport, annotationCount, images, annotations,
                      annotations: annotations[img.id].map(ann => ({
                         label: ann.label || 'object',
                         class_id: ann.class_id || 0,
-                        x_center: ann.x || 0.5,
-                        y_center: ann.y || 0.5,
+                        x_center: (ann.x || 0) + (ann.w || 0) / 2,  // center X coordinate
+                        y_center: (ann.y || 0) + (ann.h || 0) / 2,  // center Y coordinate
                         width: ann.w || 0.5,
                         height: ann.h || 0.5
                      }))
                   }))
             }
 
+            console.log('[YOLO] Bulk data:', bulkData)
+
             if (bulkData.images.length > 0) {
-               console.log('Submitting annotations before YOLO...')
-               await apiClient.post('/images/bulk/annotations/', bulkData)
+               console.log(`[YOLO]   ↑ Submitting annotations for ${bulkData.images.length} images`)
+               const bulkResult = await apiClient.post('/images/bulk/annotations/', bulkData)
+               console.log('[YOLO]   ✓ Bulk annotations submitted:', bulkResult.data)
+            } else {
+               console.log('[YOLO]   No annotations to submit')
             }
          }
 
-         // Step 3: Generate YOLO dataset
+         // Step 3: Generate YOLO dataset and download file
+         console.log('[YOLO] Step 3: Generating YOLO dataset')
+         
          const yoloPayload = {
             image_ids: uploadedImageIds,
             output_dir: 'dataset'
          }
-         console.log('YOLO payload:', yoloPayload)
+         console.log('[YOLO] YOLO payload:', yoloPayload)
+         console.log(`[YOLO] ↑ Requesting YOLO generation for ${uploadedImageIds.length} image(s)`)
 
-         const response = await apiClient.post('/images/yolo/generate/', yoloPayload)
-         console.log('YOLO response:', response.data)
+         const response = await apiClient.post('/images/yolo/generate/', yoloPayload, {
+            responseType: 'blob'
+         })
 
-         setStatusWithTimeout(`✓ Dataset generated! ${response.data.images_copied} images, ${response.data.total_annotations} annotations`)
+         console.log('[YOLO] ✓ Received response from server')
+         console.log('=== YOLO Response ===')
+         console.log('Response status:', response.status)
+         console.log('Response headers:', response.headers)
+         console.log('Blob size:', response.data.size)
+         console.log('Blob type:', response.data.type)
+
+         // Check if blob is actually valid
+         if (!response.data || response.data.size === 0) {
+            throw new Error('Received empty blob from server - no file data')
+         }
+
+         // Check if response looks like an error (text instead of binary)
+         if (response.data.type === 'text/plain' || response.data.type === 'application/json') {
+            console.warn('[YOLO] WARNING: Received text response instead of file!')
+            const text = await response.data.text()
+            console.warn('[YOLO] Response text:', text)
+            throw new Error(`Server returned error: ${text}`)
+         }
+
+         // Get filename from response headers or use default
+         const contentDisposition = response.headers['content-disposition'] || ''
+         let filename = uploadedImageIds.length > 1 ? 'yolo_dataset.zip' : 'yolo_labels.txt'
+
+         if (contentDisposition) {
+            console.log('Content-Disposition:', contentDisposition)
+            const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/)
+            if (filenameMatch) {
+               filename = filenameMatch[1]
+               console.log('Extracted filename:', filename)
+            }
+         }
+
+         // Get metadata from response headers (headers are lowercase in axios)
+         let imagesCount = parseInt(response.headers['x-images-count']) || uploadedImageIds.length
+         let annotationsCount = parseInt(response.headers['x-total-annotations']) || 0
+         
+         console.log('Images count from header:', imagesCount, 'type:', typeof imagesCount)
+         console.log('Annotations count from header:', annotationsCount, 'type:', typeof annotationsCount)
+         console.log('Final filename:', filename)
+         console.log('Uploaded image IDs:', uploadedImageIds)
+
+         // Create blob download
+         console.log(`[YOLO] ↓ Triggering file download: ${filename}`)
+         const url = window.URL.createObjectURL(response.data)
+         const link = document.createElement('a')
+         link.href = url
+         link.setAttribute('download', filename)
+         console.log('Setting download attribute to:', filename)
+         document.body.appendChild(link)
+         link.click()
+         document.body.removeChild(link)
+         window.URL.revokeObjectURL(url)
+
+         console.log('[YOLO] ✓ File downloaded:', filename)
+         setStatusWithTimeout(`✓ Dataset generated and downloaded! ${imagesCount} images, ${annotationsCount} annotations`)
+         console.log('='*50 + '\n')
       } catch (error) {
-         console.error('YOLO generation error - Status:', error.response?.status)
-         console.error('YOLO generation error - Data:', error.response?.data)
+         console.error('=== YOLO GENERATION ERROR ===')
+         console.error('Full error object:', error)
+         console.error('Error message:', error.message)
+         console.error('Error status:', error.response?.status)
+         console.error('Error data:', error.response?.data)
+         console.error('Error config:', error.config)
+         console.error('Stack:', error.stack)
+         
          let errorMsg = 'Failed to generate dataset'
+         
+         // Try to extract detailed error message
          if (error.response?.data?.error) {
             errorMsg = error.response.data.error
          } else if (error.response?.data?.detail) {
             errorMsg = error.response.data.detail
+         } else if (error.response?.data) {
+            // Log raw response data
+            console.error('Raw response data:', error.response.data)
+            errorMsg = `Server error (${error.response.status}): ${JSON.stringify(error.response.data)}`
          } else if (error.message) {
             errorMsg = error.message
          }
+         
+         console.error('Final error message:', errorMsg)
          setStatusWithTimeout(`✗ ${errorMsg}`)
+         console.log(sep + '\n')
       } finally {
          setIsExporting(false)
       }
@@ -232,7 +328,7 @@ export default function Navbar({ onExport, annotationCount, images, annotations,
                   <rect x="9" y="9" width="6" height="6" rx="1.5" stroke="#7c6af7" strokeWidth="1.5" />
                </svg>
             </div>
-            <span className={styles.title}>Image Annotator</span>
+            <span className={styles.title}>Images Ann</span>
             {annotationCount > 0 && <span className={styles.badge}>{annotationCount} boxes</span>}
          </div>
 

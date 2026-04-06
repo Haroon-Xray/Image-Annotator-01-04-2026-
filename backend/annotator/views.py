@@ -3,7 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django.shortcuts import get_object_or_404
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.views.generic import TemplateView
 from .models import Image, Annotation
 from .serializers import (
@@ -16,6 +16,9 @@ from .serializers import (
     YOLODatasetGeneratorSerializer
 )
 from .yolo_utils import YOLOConverter
+from pathlib import Path
+import io
+import json
 
 
 class ReactAppView(TemplateView):
@@ -199,49 +202,137 @@ class ImageViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['post'], url_path='yolo/generate')
     def generate_yolo_dataset(self, request):
         """
-        Generate YOLO dataset from annotated images.
-        
-        Request format:
-        {
-            "image_ids": [1, 2, 3, ...],
-            "output_dir": "dataset" (optional)
-        }
-        
-        Creates dataset structure:
-        - dataset/images/ (containing image files)
-        - dataset/labels/ (containing .txt files in YOLO format)
+        Generate YOLO dataset from annotated images and return downloadable files.
         """
-        serializer = YOLODatasetGeneratorSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        
-        image_ids = serializer.validated_data['image_ids']
-        output_dir = serializer.validated_data.get('output_dir', 'dataset')
-        
-        if not image_ids:
-            return Response(
-                {'error': 'No image IDs provided'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        print("\n" + "="*70)
+        print("[YOLO-GEN] Starting YOLO generation request")
+        print(f"[YOLO-GEN] Request data: {request.data}")
+        print("="*70)
         
         try:
+            # Validate request
+            serializer = YOLODatasetGeneratorSerializer(data=request.data)
+            if not serializer.is_valid():
+                print(f"[YOLO-GEN] Serializer validation failed: {serializer.errors}")
+                error_msg = f'Invalid request: {serializer.errors}'
+                print(f"[YOLO-GEN] Returning error: {error_msg}")
+                response = HttpResponse(
+                    json.dumps({'error': error_msg}),
+                    content_type='application/json',
+                    status=400
+                )
+                response['X-Images-Count'] = '0'
+                response['X-Total-Annotations'] = '0'
+                return response
+            
+            image_ids = serializer.validated_data['image_ids']
+            print(f"[YOLO-GEN] Image IDs requested: {image_ids}")
+            
+            if not image_ids:
+                print("[YOLO-GEN] No image IDs provided")
+                error_msg = 'No image IDs provided'
+                response = HttpResponse(
+                    json.dumps({'error': error_msg}),
+                    content_type='application/json',
+                    status=400
+                )
+                response['X-Images-Count'] = '0'
+                response['X-Total-Annotations'] = '0'
+                return response
+            
+            # Fetch images from database
             images = Image.objects.filter(id__in=image_ids)
+            print(f"[YOLO-GEN] Found {images.count()} images in database")
             
             if not images.exists():
-                return Response(
-                    {'error': 'No images found with provided IDs'},
-                    status=status.HTTP_404_NOT_FOUND
+                print(f"[YOLO-GEN] ERROR: No images found with IDs {image_ids}")
+                error_msg = f'No images found with provided IDs: {image_ids}'
+                response = HttpResponse(
+                    json.dumps({'error': error_msg}),
+                    content_type='application/json',
+                    status=404
                 )
+                response['X-Images-Count'] = '0'
+                response['X-Total-Annotations'] = '0'
+                return response
             
-            # Generate YOLO dataset
-            generation_results = YOLOConverter.generate_yolo_dataset(images, output_dir=output_dir)
+            images_list = list(images)
+            num_images = len(images_list)
+            print(f"[YOLO-GEN] Processing {num_images} images")
             
-            # Calculate class distribution
-            class_distribution = YOLOConverter.class_distribution(images)
-            generation_results['class_distribution'] = class_distribution
+            # Print image details
+            for img in images_list:
+                annot_count = img.annotations.count()
+                print(f"[YOLO-GEN]   - Image {img.id}: {img.name} ({annot_count} annotations)")
             
-            return Response(generation_results, status=status.HTTP_200_OK)
+            # Generate simple text-only response first to test
+            if num_images == 1:
+                print("[YOLO-GEN] Single image detected - generating .txt file")
+                
+                image = images_list[0]
+                try:
+                    yolo_content = YOLOConverter.generate_yolo_text(image)
+                    print(f"[YOLO-GEN] Generated YOLO content: {len(yolo_content)} bytes")
+                    
+                    filename = f"{image.id}_{Path(image.name).stem}.txt"
+                    print(f"[YOLO-GEN] Filename: {filename}")
+                    
+                    response = HttpResponse(
+                        yolo_content.encode('utf-8'),
+                        content_type='text/plain'
+                    )
+                    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+                    response['X-Images-Count'] = str(1)
+                    response['X-Total-Annotations'] = str(image.annotations.count())
+                    
+                    print(f"[YOLO-GEN] SUCCESS: Returning text file {filename}")
+                    return response
+                    
+                except Exception as e:
+                    print(f"[YOLO-GEN] ERROR generating text file: {str(e)}")
+                    import traceback
+                    traceback.print_exc()
+                    raise
             
+            else:
+                print(f"[YOLO-GEN] Multiple images ({num_images}) detected - generating .zip file")
+                
+                try:
+                    print("[YOLO-GEN] Calling generate_yolo_zip_with_images()...")
+                    zip_buffer = YOLOConverter.generate_yolo_zip_with_images(images_list)
+                    
+                    zip_data = zip_buffer.getvalue()
+                    print(f"[YOLO-GEN] ZIP generated successfully: {len(zip_data)} bytes")
+                    
+                    # Count total annotations
+                    total_annotations = sum(img.annotations.count() for img in images_list)
+                    print(f"[YOLO-GEN] Total annotations: {total_annotations}")
+                    
+                    filename = f"yolo_dataset_{num_images}_images.zip"
+                    print(f"[YOLO-GEN] Filename: {filename}")
+                    
+                    response = HttpResponse(
+                        zip_data,
+                        content_type='application/zip'
+                    )
+                    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+                    response['X-Images-Count'] = str(num_images)
+                    response['X-Total-Annotations'] = str(total_annotations)
+                    
+                    print(f"[YOLO-GEN] SUCCESS: Returning ZIP file {filename} ({len(zip_data)} bytes)")
+                    return response
+                    
+                except Exception as e:
+                    print(f"[YOLO-GEN] ERROR generating ZIP file: {str(e)}")
+                    import traceback
+                    traceback.print_exc()
+                    raise
+        
         except Exception as e:
+            print(f"[YOLO-GEN] FATAL ERROR: {str(e)}")
+            import traceback
+            print(traceback.format_exc())
+            
             return Response(
                 {'error': f'Failed to generate dataset: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR

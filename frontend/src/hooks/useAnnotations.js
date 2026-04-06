@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import apiClient from '../api'
 
 let idCounter = 1
 const genId = () => `box_${idCounter++}`
@@ -16,6 +17,44 @@ export function useAnnotations() {
 
    const activeImage = images.find(img => img.id === activeImageId) || null
    const activeAnnotations = annotations[activeImageId] || []
+
+   // Auto-save annotation to database if image is uploaded
+   const saveAnnotationToDb = useCallback(async (imageId, annotation) => {
+      // Only save if image has a numeric ID (uploaded to backend)
+      if (typeof imageId !== 'number') {
+         console.log(`[AUTO-SAVE] Image ${imageId} not yet uploaded, skipping DB save`)
+         return
+      }
+
+      try {
+         // Convert local annotation format to YOLO format
+         // annotation stores: {x, y, w, h} = top-left corner + size (all normalized 0-1)
+         // YOLO needs: {x_center, y_center, width, height} = center point + size (all normalized 0-1)
+         const annotationData = {
+            label: annotation.label || 'object',
+            class_id: annotation.class_id || 0,
+            x_center: (annotation.x || 0) + (annotation.w || 0) / 2,  // center X
+            y_center: (annotation.y || 0) + (annotation.h || 0) / 2,  // center Y
+            width: annotation.w || 0.5,
+            height: annotation.h || 0.5,
+            x: 0,
+            y: 0
+         }
+
+         console.log(`[AUTO-SAVE] Box: x=${annotation.x}, y=${annotation.y}, w=${annotation.w}, h=${annotation.h}`)
+         console.log(`[AUTO-SAVE] YOLO: x_center=${annotationData.x_center}, y_center=${annotationData.y_center}`)
+         console.log(`[AUTO-SAVE] Saving annotation for image ${imageId}:`, annotationData)
+
+         // Save single annotation endpoint
+         const response = await apiClient.post(`/images/${imageId}/annotations/`, annotationData)
+         console.log(`[AUTO-SAVE] ✓ Annotation saved successfully:`, response.data)
+      } catch (err) {
+         console.error(`[AUTO-SAVE] ✗ Failed to auto-save annotation for image ${imageId}:`, err)
+         if (err.response?.data) {
+            console.error(`[AUTO-SAVE] Server error:`, err.response.data)
+         }
+      }
+   }, [])
 
    const addImages = useCallback((files) => {
       const newImages = files.map(file => ({
@@ -47,7 +86,12 @@ export function useAnnotations() {
       }
       setAnnotations(prev => ({ ...prev, [imageId]: [...(prev[imageId] || []), newBox] }))
       setSelectedBoxId(newBox.id)
-   }, [annotations])
+
+      // Auto-save to database if image is uploaded
+      if (typeof imageId === 'number') {
+         saveAnnotationToDb(imageId, newBox)
+      }
+   }, [annotations, saveAnnotationToDb])
 
    const updateAnnotation = useCallback((imageId, boxId, changes) => {
       setAnnotations(prev => ({
