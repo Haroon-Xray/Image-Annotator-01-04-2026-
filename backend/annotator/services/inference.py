@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import List, Dict, Union, Tuple
 from PIL import Image as PILImage
 from ultralytics import YOLO
+import torch
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +24,7 @@ class InferenceService:
     - Running inference on image files
     - Formatting detection results
     - Caching loaded models for performance
+    - Automatic device selection (GPU if available, else CPU)
     """
     
     _models = {}  # Cache for loaded models
@@ -37,6 +39,24 @@ class InferenceService:
         """
         self.model_name = model_name
         self._model = None
+        self.device = self._select_device()
+    
+    @staticmethod
+    def _select_device() -> str:
+        """
+        Automatically select the best available device.
+        
+        Returns:
+            Device string: 'cuda' if GPU available, 'cpu' otherwise
+        """
+        if torch.cuda.is_available():
+            device = 'cuda'
+            logger.info(f"CUDA available - Using GPU ({torch.cuda.get_device_name(0)})")
+        else:
+            device = 'cpu'
+            logger.info("CUDA not available - Using CPU")
+        
+        return device
     
     def _load_model(self) -> YOLO:
         """
@@ -119,13 +139,13 @@ class InferenceService:
             model = self._load_model()
             
             # Run inference
-            logger.debug(f"Running inference on {image_path}")
+            logger.debug(f"Running inference on {image_path} using device: {self.device}")
             results = model.predict(
                 source=str(image_path),
                 conf=confidence,
                 iou=iou,
                 verbose=False,
-                device=0  # Use GPU if available, else CPU
+                device=self.device  # Use selected device (GPU or CPU)
             )
             
             # Format detections

@@ -351,16 +351,25 @@ class InferenceViewSet(APIView):
     """
     API View for running YOLO inference on images.
     
+    Supports two modes:
+    1. Image from database: Send image_id (JSON body)
+    2. Uploaded image: Send image file (form data)
+
     Methods:
-    - POST /api/inference/ - Run inference on uploaded image
+    - POST /api/inference/ - Run inference on image
     """
-    parser_classes = (MultiPartParser, FormParser)
+    parser_classes = (MultiPartParser, FormParser, JSONParser)
     
     def post(self, request):
         """
-        Run inference on uploaded image.
+        Run inference on image from dataset or uploaded file.
         
-        Request:
+        Request (JSON):
+            - image_id: int (required) - ID of image in database
+            - confidence: float (optional) - Confidence threshold (0-1), default 0.5
+            - iou: float (optional) - IOU threshold for NMS (0-1), default 0.45
+        
+        Or Request (Form Data):
             - image: ImageField (required) - Image file for inference
             - confidence: float (optional) - Confidence threshold (0-1), default 0.5
             - iou: float (optional) - IOU threshold for NMS (0-1), default 0.45
@@ -396,40 +405,72 @@ class InferenceViewSet(APIView):
         start_time = time.time()
         
         try:
-            # Validate request
-            serializer = InferenceRequestSerializer(data=request.data)
-            if not serializer.is_valid():
-                return Response(
-                    {
-                        'success': False,
-                        'message': 'Invalid request',
-                        'errors': serializer.errors
-                    },
-                    status=status.HTTP_400_BAD_REQUEST
-                )
+            # Determine if using image_id or file upload
+            image_id = request.data.get('image_id')
+            image_file = request.FILES.get('image')
+            confidence = float(request.data.get('confidence', 0.5))
+            iou = float(request.data.get('iou', 0.45))
             
-            validated_data = serializer.validated_data
-            image_file = validated_data['image']
-            confidence = validated_data.get('confidence', 0.5)
-            iou = validated_data.get('iou', 0.45)
+            logger.info(f"Inference request: image_id={image_id}, image_file={'yes' if image_file else 'no'}, confidence={confidence}, iou={iou}")
             
-            logger.info(f"Processing inference request with confidence={confidence}, iou={iou}")
-            
-            # Save image to temporary file
-            with tempfile.NamedTemporaryFile(
-                suffix='.png',
-                delete=False,
-                dir=tempfile.gettempdir()
-            ) as tmp_file:
-                temp_image_path = tmp_file.name
-                
-                # Write uploaded file to temporary location
-                for chunk in image_file.chunks():
-                    tmp_file.write(chunk)
-            
-            logger.debug(f"Image saved to temporary file: {temp_image_path}")
+            temp_image_path = None
             
             try:
+                # Handle image from database
+                if image_id:
+                    try:
+                        image_obj = Image.objects.get(id=image_id)
+                        logger.info(f"Loading image from database: {image_obj.name} (ID: {image_id})")
+                        
+                        # Create temp file with image data from database
+                        with tempfile.NamedTemporaryFile(
+                            suffix='.png',
+                            delete=False,
+                            dir=tempfile.gettempdir()
+                        ) as tmp_file:
+                            temp_image_path = tmp_file.name
+                            
+                            # Read from uploaded image file
+                            image_data = image_obj.image_file.read()
+                            tmp_file.write(image_data)
+                            logger.debug(f"Image saved to temporary file: {temp_image_path}")
+                    
+                    except Image.DoesNotExist:
+                        return Response(
+                            {
+                                'success': False,
+                                'message': f'Image with ID {image_id} not found in database',
+                                'processing_time': round(time.time() - start_time, 3)
+                            },
+                            status=status.HTTP_404_NOT_FOUND
+                        )
+                
+                # Handle uploaded file (backward compatibility)
+                elif image_file:
+                    logger.info(f"Processing uploaded image: {image_file.name}")
+                    
+                    with tempfile.NamedTemporaryFile(
+                        suffix='.png',
+                        delete=False,
+                        dir=tempfile.gettempdir()
+                    ) as tmp_file:
+                        temp_image_path = tmp_file.name
+                        
+                        # Write uploaded file to temporary location
+                        for chunk in image_file.chunks():
+                            tmp_file.write(chunk)
+                        logger.debug(f"Image saved to temporary file: {temp_image_path}")
+                
+                else:
+                    return Response(
+                        {
+                            'success': False,
+                            'message': 'Either image_id (JSON) or image file (form data) must be provided',
+                            'processing_time': round(time.time() - start_time, 3)
+                        },
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                
                 # Run inference
                 inference_service = InferenceService()
                 detections = inference_service.run_inference(
@@ -451,7 +492,7 @@ class InferenceViewSet(APIView):
                 logger.info(f"Inference successful: {len(detections)} detections, {processing_time:.3f}s")
                 
                 return Response(response_data, status=status.HTTP_200_OK)
-                
+            
             except (FileNotFoundError, ValueError) as e:
                 logger.error(f"Validation error: {str(e)}")
                 processing_time = time.time() - start_time
@@ -478,11 +519,12 @@ class InferenceViewSet(APIView):
             
             finally:
                 # Clean up temporary file
-                try:
-                    Path(temp_image_path).unlink(missing_ok=True)
-                    logger.debug(f"Cleaned up temporary file: {temp_image_path}")
-                except Exception as e:
-                    logger.warning(f"Failed to delete temporary file {temp_image_path}: {str(e)}")
+                if temp_image_path:
+                    try:
+                        Path(temp_image_path).unlink(missing_ok=True)
+                        logger.debug(f"Cleaned up temporary file: {temp_image_path}")
+                    except Exception as e:
+                        logger.warning(f"Failed to delete temporary file {temp_image_path}: {str(e)}")
         
         except Exception as e:
             logger.error(f"Unexpected inference error: {str(e)}", exc_info=True)

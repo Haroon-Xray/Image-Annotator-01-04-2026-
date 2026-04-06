@@ -38,17 +38,30 @@ export default function ImageSidebar({ images, activeImageId, onSelect, onUpload
             {images.map(img => {
                const boxCount = (annotations[img.id] || []).length
                const isActive = img.id === activeImageId
+               const isUploading = img.uploading
                return (
-                  <div key={img.id} className={`${styles.item} ${isActive ? styles.active : ''}`} onClick={() => onSelect(img.id)}>
+                  <div key={img.id} className={`${styles.item} ${isActive ? styles.active : ''} ${isUploading ? styles.uploading : ''}`} onClick={() => onSelect(img.id)}>
                      <div className={styles.thumb}>
                         <img src={img.url} alt={img.name} className={styles.thumbImg} />
                         {boxCount > 0 && <span className={styles.thumbBadge}>{boxCount}</span>}
+                        {isUploading && <span className={styles.uploadingBadge}>⏳</span>}
                      </div>
                      <div className={styles.itemMeta}>
                         <span className={styles.imgName}>{img.name}</span>
-                        <span className={styles.imgBoxes}>{boxCount === 0 ? 'no boxes' : `${boxCount} box${boxCount !== 1 ? 'es' : ''}`}</span>
+                        <span className={styles.imgBoxes}>
+                           {isUploading
+                              ? 'uploading...'
+                              : (boxCount === 0 ? 'no boxes' : `${boxCount} box${boxCount !== 1 ? 'es' : ''}`)
+                           }
+                        </span>
                      </div>
-                     <button className={styles.removeBtn} onClick={e => { e.stopPropagation(); onRemove(img.id) }}>×</button>
+                     <button
+                        className={styles.removeBtn}
+                        onClick={e => { e.stopPropagation(); onRemove(img.id) }}
+                        disabled={isUploading}
+                     >
+                        ×
+                     </button>
                   </div>
                )
             })}

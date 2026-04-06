@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import styles from './InferencePanel.module.css';
 import CanvasViewer from './CanvasViewer';
 
@@ -6,14 +6,13 @@ import CanvasViewer from './CanvasViewer';
  * InferencePanel Component
  * 
  * Allows users to:
- * 1. Upload an image for inference
- * 2. Run YOLOv8 inference on the image
+ * 1. Select an image from the annotated dataset
+ * 2. Run YOLOv8 inference on the selected image
  * 3. Display detected objects with bounding boxes
  * 4. Adjust confidence and IOU thresholds
  */
-const InferencePanel = () => {
-   const [imageFile, setImageFile] = useState(null);
-   const [imageUrl, setImageUrl] = useState(null);
+const InferencePanel = ({ images = [], annotations = {}, activeImageId = null, onSelectImage = () => { } }) => {
+   const [selectedDatasetImageId, setSelectedDatasetImageId] = useState(null);
    const [detections, setDetections] = useState([]);
    const [loading, setLoading] = useState(false);
    const [error, setError] = useState(null);
@@ -21,37 +20,30 @@ const InferencePanel = () => {
    const [confidence, setConfidence] = useState(0.5);
    const [iou, setIou] = useState(0.45);
 
-   /**
-    * Handle image file selection
-    * @param {Event} e - File input event
-    */
-   const handleImageSelect = (e) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
+   // Filter images to show only those from the dataset (numeric IDs) with annotations
+   const datasetImages = useMemo(() => {
+      return images.filter(img =>
+         typeof img.id === 'number' && // Only database images
+         (annotations[img.id]?.length || 0) > 0 // Must have annotations
+      );
+   }, [images, annotations]);
 
-      // Validate file type
-      if (!file.type.startsWith('image/')) {
-         setError('Please select a valid image file');
-         return;
-      }
+   // Get currently selected image
+   const selectedImage = useMemo(() => {
+      const imageId = selectedDatasetImageId || activeImageId;
+      return datasetImages.find(img => img.id === imageId);
+   }, [selectedDatasetImageId, activeImageId, datasetImages]);
 
-      setImageFile(file);
-      setError(null);
-
-      // Create local preview URL
-      const reader = new FileReader();
-      reader.onload = (event) => {
-         setImageUrl(event.target?.result);
-      };
-      reader.readAsDataURL(file);
-
-      // Clear previous detections
+   const handleImageSelect = (imageId) => {
+      setSelectedDatasetImageId(imageId);
+      onSelectImage(imageId);
       setDetections([]);
+      setError(null);
    };
 
    /**
-   * Helper function to get CSRF token
-   */
+    * Helper function to get CSRF token
+    */
    const getCsrfToken = () => {
       let csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
       if (!csrfToken) {
@@ -64,11 +56,11 @@ const InferencePanel = () => {
    };
 
    /**
-    * Run inference on the selected image
+    * Run inference on the selected dataset image
     */
    const runInference = async () => {
-      if (!imageFile) {
-         setError('Please select an image first');
+      if (!selectedImage) {
+         setError('Please select an image from the dataset first');
          return;
       }
 
@@ -77,24 +69,24 @@ const InferencePanel = () => {
       setDetections([]);
 
       try {
-         const formData = new FormData();
-         formData.append('image', imageFile);
-         formData.append('confidence', confidence);
-         formData.append('iou', iou);
-
-         const headers = {};
          const csrfToken = getCsrfToken();
+         const headers = {
+            'Content-Type': 'application/json',
+         };
          if (csrfToken) {
             headers['X-CSRFToken'] = csrfToken;
          }
 
          const response = await fetch('/api/inference/', {
             method: 'POST',
-            body: formData,
             headers: headers,
+            body: JSON.stringify({
+               image_id: selectedImage.id,
+               confidence: confidence,
+               iou: iou,
+            }),
          });
 
-         // Try to parse as JSON, handle HTML error responses
          let data;
          const contentType = response.headers.get('content-type');
 
@@ -102,7 +94,7 @@ const InferencePanel = () => {
             data = await response.json();
          } else {
             const text = await response.text();
-            throw new Error(`Server returned ${response.status}: ${text.substring(0, 100)}`);
+            throw new Error(`Server error ${response.status}: ${text.substring(0, 100)}`);
          }
 
          if (!response.ok) {
@@ -110,6 +102,7 @@ const InferencePanel = () => {
                data.message || `Inference failed with status ${response.status}`
             );
          }
+
          if (!data.success) {
             throw new Error(data.message || 'Inference failed');
          }
@@ -128,34 +121,64 @@ const InferencePanel = () => {
     * Reset the panel to initial state
     */
    const handleReset = () => {
-      setImageFile(null);
-      setImageUrl(null);
+      setSelectedDatasetImageId(null);
       setDetections([]);
       setError(null);
       setProcessingTime(null);
    };
 
+   // Show message if no dataset images available
+   if (datasetImages.length === 0) {
+      return (
+         <div className={styles.inferencePanel}>
+            <h2 className={styles.title}>🤖 YOLO Inference</h2>
+            <div className={styles.emptyState}>
+               <p>📊 No images with annotations found</p>
+               <p className={styles.emptyStateSubtext}>
+                  Please go to the Annotate tab to:
+               </p>
+               <ol className={styles.instructions}>
+                  <li>Upload images</li>
+                  <li>Draw bounding boxes around objects</li>
+                  <li>Return here to run inference</li>
+               </ol>
+            </div>
+         </div>
+      );
+   }
+
    return (
       <div className={styles.inferencePanel}>
-         <h2 className={styles.title}>YOLO Inference</h2>
+         <h2 className={styles.title}>🤖 YOLO Inference</h2>
+         <p className={styles.subtitle}>Select annotated image from dataset and run detection</p>
 
-         {/* Image Upload Section */}
-         <div className={styles.uploadSection}>
-            <label htmlFor="image-input" className={styles.uploadLabel}>
-               <input
-                  id="image-input"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageSelect}
-                  disabled={loading}
-                  className={styles.fileInput}
-               />
-               <span className={styles.uploadButton}>
-                  {imageFile ? '📁 Change Image' : '📁 Select Image'}
-               </span>
+         {/* Dataset Image Selection Section */}
+         <div className={styles.selectionSection}>
+            <label htmlFor="dataset-image-select" className={styles.label}>
+               📸 Select Image from Dataset ({datasetImages.length} available)
             </label>
-            {imageFile && (
-               <div className={styles.fileName}>{imageFile.name}</div>
+            <select
+               id="dataset-image-select"
+               value={selectedImage?.id || ''}
+               onChange={(e) => handleImageSelect(Number(e.target.value))}
+               disabled={loading}
+               className={styles.select}
+            >
+               <option value="">-- Choose an image --</option>
+               {datasetImages.map(img => (
+                  <option key={img.id} value={img.id}>
+                     {img.name} ({annotations[img.id]?.length || 0} boxes)
+                  </option>
+               ))}
+            </select>
+            {selectedImage && (
+               <div className={styles.selectedInfo}>
+                  ✓ Selected: <strong>{selectedImage.name}</strong>
+                  <br />
+                  Annotations: <span className={styles.annotationCount}>
+                     {annotations[selectedImage.id]?.length || 0} boxes
+                  </span>
+               </div>
             )}
          </div>
 
@@ -163,7 +186,7 @@ const InferencePanel = () => {
          <div className={styles.parametersSection}>
             <div className={styles.parameterGroup}>
                <label htmlFor="confidence-slider">
-                  Confidence Threshold: <span>{confidence.toFixed(2)}</span>
+                  Confidence Threshold: <span className={styles.value}>{confidence.toFixed(2)}</span>
                </label>
                <input
                   id="confidence-slider"
@@ -176,11 +199,12 @@ const InferencePanel = () => {
                   disabled={loading}
                   className={styles.slider}
                />
+               <div className={styles.hint}>Lower = more detections, Higher = fewer, more confident</div>
             </div>
 
             <div className={styles.parameterGroup}>
                <label htmlFor="iou-slider">
-                  IOU Threshold: <span>{iou.toFixed(2)}</span>
+                  IOU Threshold: <span className={styles.value}>{iou.toFixed(2)}</span>
                </label>
                <input
                   id="iou-slider"
@@ -193,6 +217,7 @@ const InferencePanel = () => {
                   disabled={loading}
                   className={styles.slider}
                />
+               <div className={styles.hint}>Lower = removes more overlapping boxes, Higher = keeps more</div>
             </div>
          </div>
 
@@ -200,14 +225,14 @@ const InferencePanel = () => {
          <div className={styles.buttonsSection}>
             <button
                onClick={runInference}
-               disabled={!imageFile || loading}
+               disabled={!selectedImage || loading}
                className={`${styles.button} ${styles.runButton}`}
             >
-               {loading ? '⏳ Running...' : '🚀 Run Inference'}
+               {loading ? '⏳ Running inference...' : '🚀 Run Inference'}
             </button>
             <button
                onClick={handleReset}
-               disabled={loading || !imageFile}
+               disabled={loading}
                className={`${styles.button} ${styles.resetButton}`}
             >
                🔄 Reset
@@ -229,12 +254,12 @@ const InferencePanel = () => {
          )}
 
          {/* Image Preview with Canvas Viewer */}
-         {imageUrl && (
+         {selectedImage && (
             <div className={styles.imageSection}>
+               <h3 className={styles.previewTitle}>Detection Results</h3>
                <CanvasViewer
-                  imageSrc={imageUrl}
+                  imageSrc={selectedImage.url}
                   detections={detections}
-                  imageFile={imageFile}
                />
             </div>
          )}
@@ -242,16 +267,16 @@ const InferencePanel = () => {
          {/* Detections Summary */}
          {detections.length > 0 && (
             <div className={styles.detectionsSummary}>
-               <h3>Detected Objects ({detections.length})</h3>
+               <h3>🎯 Detected Objects ({detections.length})</h3>
                <div className={styles.detectionsList}>
                   {detections.map((detection, idx) => (
                      <div key={idx} className={styles.detectionItem}>
-                        <div className={styles.detectionLabel}>
+                        <span className={styles.detectionLabel}>
                            {detection.label}
-                        </div>
-                        <div className={styles.detectionConfidence}>
+                        </span>
+                        <span className={styles.detectionConfidence}>
                            {(detection.confidence * 100).toFixed(1)}%
-                        </div>
+                        </span>
                      </div>
                   ))}
                </div>
@@ -259,9 +284,9 @@ const InferencePanel = () => {
          )}
 
          {/* No Detections Message */}
-         {detections.length === 0 && imageUrl && !loading && !error && (
+         {detections.length === 0 && selectedImage && !loading && !error && processingTime !== null && (
             <div className={styles.noDetections}>
-               No objects detected with current parameters
+               ⭕ No objects detected with current parameters
             </div>
          )}
       </div>

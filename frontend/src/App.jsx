@@ -91,7 +91,12 @@ export default function App() {
                   </>
                )}
                {activeTab === 'inference' && (
-                  <InferencePanel />
+                  <InferencePanel 
+                     images={images} 
+                     annotations={annotations}
+                     activeImageId={activeImageId}
+                     onSelectImage={setActiveImageId}
+                  />
                )}
             </div>
             <AnnotationsPanel
