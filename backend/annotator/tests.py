@@ -1,10 +1,15 @@
 from django.test import TestCase
-from rest_framework.test import APIClient
+from rest_framework.test import APIClient, APITestCase
+from rest_framework import status
 from django.core.files.uploadedfile import SimpleUploadedFile
 from PIL import Image as PILImage
 from io import BytesIO
+from pathlib import Path
+import os
+import tempfile
 from .models import Image, Annotation
 from .yolo_utils import YOLOConverter
+from .services.inference import InferenceService
 
 
 class ImageAPITestCase(TestCase):
@@ -256,3 +261,275 @@ class YOLOConverterTestCase(TestCase):
         for case in test_cases:
             is_valid, error = YOLOConverter.validate_annotation(case)
             self.assertTrue(is_valid, f"Should be valid: {case}, Error: {error}")
+
+
+class InferenceServiceTestCase(TestCase):
+    """Test cases for InferenceService"""
+    
+    @classmethod
+    def setUpClass(cls):
+        """Set up test fixtures for all tests"""
+        super().setUpClass()
+        cls.service = InferenceService()
+    
+    @classmethod
+    def tearDownClass(cls):
+        """Clean up after all tests"""
+        super().tearDownClass()
+        InferenceService.clear_model_cache()
+    
+    def setUp(self):
+        """Set up test fixtures before each test"""
+        # Create a temporary test image
+        self.test_image = PILImage.new('RGB', (640, 480), color='red')
+        self.temp_file = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
+        self.test_image.save(self.temp_file.name)
+        self.test_image_path = self.temp_file.name
+    
+    def tearDown(self):
+        """Clean up after each test"""
+        if hasattr(self, 'test_image_path') and os.path.exists(self.test_image_path):
+            try:
+                os.unlink(self.test_image_path)
+            except Exception:
+                pass
+    
+    def test_model_loads_successfully(self):
+        """Test that YOLOv8 model loads correctly"""
+        service = InferenceService()
+        model = service._load_model()
+        
+        self.assertIsNotNone(model)
+        self.assertTrue(hasattr(model, 'predict'))
+    
+    def test_model_caching(self):
+        """Test that models are cached after loading"""
+        service = InferenceService()
+        
+        # First load
+        model1 = service._load_model()
+        cached_models_1 = InferenceService.get_cached_models()
+        self.assertEqual(len(cached_models_1), 1)
+        
+        # Second load - should use cache
+        model2 = service._load_model()
+        cached_models_2 = InferenceService.get_cached_models()
+        self.assertEqual(len(cached_models_2), 1)
+        self.assertIs(model1, model2)
+    
+    def test_inference_returns_list(self):
+        """Test that inference returns a list"""
+        result = self.service.run_inference(self.test_image_path)
+        self.assertIsInstance(result, list)
+    
+    def test_inference_output_structure(self):
+        """Test that inference output has correct structure"""
+        result = self.service.run_inference(self.test_image_path)
+        
+        # Result should be a list
+        self.assertIsInstance(result, list)
+        
+        # Each detection should have required keys
+        for detection in result:
+            self.assertIn('label', detection)
+            self.assertIn('confidence', detection)
+            self.assertIn('bbox', detection)
+            
+            # Validate label
+            self.assertIsInstance(detection['label'], str)
+            
+            # Validate confidence
+            self.assertIsInstance(detection['confidence'], float)
+            self.assertGreaterEqual(detection['confidence'], 0)
+            self.assertLessEqual(detection['confidence'], 1)
+            
+            # Validate bbox structure
+            bbox = detection['bbox']
+            self.assertIn('x', bbox)
+            self.assertIn('y', bbox)
+            self.assertIn('width', bbox)
+            self.assertIn('height', bbox)
+            
+            # Validate bbox values are normalized (0-1)
+            for key in ['x', 'y', 'width', 'height']:
+                value = bbox[key]
+                self.assertIsInstance(value, float)
+                self.assertGreaterEqual(value, 0)
+                self.assertLessEqual(value, 1)
+    
+    def test_inference_confidence_threshold(self):
+        """Test inference with different confidence thresholds"""
+        result_high = self.service.run_inference(
+            self.test_image_path,
+            confidence=0.9
+        )
+        result_low = self.service.run_inference(
+            self.test_image_path,
+            confidence=0.1
+        )
+        
+        self.assertGreaterEqual(len(result_low), 0)
+        self.assertGreaterEqual(len(result_high), 0)
+    
+    def test_inference_invalid_image_path(self):
+        """Test inference with non-existent image"""
+        with self.assertRaises(FileNotFoundError):
+            self.service.run_inference("/path/to/nonexistent/image.png")
+    
+    def test_inference_invalid_confidence(self):
+        """Test inference with invalid confidence values"""
+        with self.assertRaises(ValueError):
+            self.service.run_inference(self.test_image_path, confidence=-0.1)
+        
+        with self.assertRaises(ValueError):
+            self.service.run_inference(self.test_image_path, confidence=1.5)
+    
+    def test_inference_invalid_iou(self):
+        """Test inference with invalid IOU values"""
+        with self.assertRaises(ValueError):
+            self.service.run_inference(self.test_image_path, iou=-0.1)
+        
+        with self.assertRaises(ValueError):
+            self.service.run_inference(self.test_image_path, iou=1.5)
+    
+    def test_model_clear_cache(self):
+        """Test clearing model cache"""
+        service = InferenceService()
+        model1 = service._load_model()
+        
+        self.assertEqual(len(InferenceService.get_cached_models()), 1)
+        
+        InferenceService.clear_model_cache()
+        self.assertEqual(len(InferenceService.get_cached_models()), 0)
+        
+        # Next load should load fresh model
+        model2 = service._load_model()
+        self.assertEqual(len(InferenceService.get_cached_models()), 1)
+        self.assertIsNot(model1, model2)
+
+
+class InferenceAPITestCase(APITestCase):
+    """Test cases for Inference API endpoint"""
+    
+    @classmethod
+    def setUpClass(cls):
+        """Set up test fixtures for all tests"""
+        super().setUpClass()
+        InferenceService.clear_model_cache()
+    
+    @classmethod
+    def tearDownClass(cls):
+        """Clean up after all tests"""
+        super().tearDownClass()
+        InferenceService.clear_model_cache()
+    
+    def setUp(self):
+        """Set up test fixtures before each test"""
+        self.client = APIClient()
+        self.inference_url = '/api/inference/'
+        
+        # Create a test image
+        self.test_image = PILImage.new('RGB', (640, 480), color='blue')
+    
+    def _get_image_file(self):
+        """Get image file for upload"""
+        img_io = BytesIO()
+        self.test_image.save(img_io, format='PNG')
+        img_io.seek(0)
+        return SimpleUploadedFile(
+            name='test_image.png',
+            content=img_io.getvalue(),
+            content_type='image/png'
+        )
+    
+    def test_inference_api_success(self):
+        """Test successful inference API call"""
+        response = self.client.post(
+            self.inference_url,
+            {'image': self._get_image_file()},
+            format='multipart'
+        )
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        
+        self.assertIn('success', data)
+        self.assertTrue(data['success'])
+        self.assertIn('detection_count', data)
+        self.assertIn('detections', data)
+        self.assertIn('processing_time', data)
+        self.assertIsInstance(data['detections'], list)
+    
+    def test_inference_api_missing_image(self):
+        """Test inference API without image"""
+        response = self.client.post(self.inference_url, {})
+        
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        data = response.json()
+        self.assertFalse(data.get('success', True))
+    
+    def test_inference_api_confidence_parameter(self):
+        """Test inference API with confidence parameter"""
+        response = self.client.post(
+            self.inference_url,
+            {
+                'image': self._get_image_file(),
+                'confidence': 0.7
+            },
+            format='multipart'
+        )
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        self.assertTrue(data['success'])
+    
+    def test_inference_api_iou_parameter(self):
+        """Test inference API with IOU parameter"""
+        response = self.client.post(
+            self.inference_url,
+            {
+                'image': self._get_image_file(),
+                'iou': 0.5
+            },
+            format='multipart'
+        )
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        self.assertTrue(data['success'])
+    
+    def test_inference_api_invalid_confidence(self):
+        """Test inference API with invalid confidence"""
+        response = self.client.post(
+            self.inference_url,
+            {
+                'image': self._get_image_file(),
+                'confidence': 1.5
+            },
+            format='multipart'
+        )
+        
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+    
+    def test_inference_api_response_structure(self):
+        """Test inference API response structure"""
+        response = self.client.post(
+            self.inference_url,
+            {'image': self._get_image_file()},
+            format='multipart'
+        )
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        
+        # Check response structure
+        required_keys = ['success', 'message', 'detection_count', 'detections', 'processing_time']
+        for key in required_keys:
+            self.assertIn(key, data)
+        
+        # Check types
+        self.assertIsInstance(data['success'], bool)
+        self.assertIsInstance(data['message'], str)
+        self.assertIsInstance(data['detection_count'], int)
+        self.assertIsInstance(data['detections'], list)
+        self.assertIsInstance(data['processing_time'], float)

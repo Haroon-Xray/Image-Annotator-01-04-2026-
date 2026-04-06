@@ -2,6 +2,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
+from rest_framework.views import APIView
 from django.shortcuts import get_object_or_404
 from django.http import JsonResponse, HttpResponse
 from django.views.generic import TemplateView
@@ -202,137 +203,66 @@ class ImageViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['post'], url_path='yolo/generate')
     def generate_yolo_dataset(self, request):
         """
-        Generate YOLO dataset from annotated images and return downloadable files.
+        Generate YOLO dataset from annotated images and return as ZIP file download.
         """
-        print("\n" + "="*70)
-        print("[YOLO-GEN] Starting YOLO generation request")
-        print(f"[YOLO-GEN] Request data: {request.data}")
-        print("="*70)
-        
         try:
             # Validate request
             serializer = YOLODatasetGeneratorSerializer(data=request.data)
             if not serializer.is_valid():
-                print(f"[YOLO-GEN] Serializer validation failed: {serializer.errors}")
-                error_msg = f'Invalid request: {serializer.errors}'
-                print(f"[YOLO-GEN] Returning error: {error_msg}")
-                response = HttpResponse(
-                    json.dumps({'error': error_msg}),
-                    content_type='application/json',
-                    status=400
+                return Response(
+                    {'error': f'Invalid request: {serializer.errors}'},
+                    status=status.HTTP_400_BAD_REQUEST
                 )
-                response['X-Images-Count'] = '0'
-                response['X-Total-Annotations'] = '0'
-                return response
             
             image_ids = serializer.validated_data['image_ids']
-            print(f"[YOLO-GEN] Image IDs requested: {image_ids}")
             
             if not image_ids:
-                print("[YOLO-GEN] No image IDs provided")
-                error_msg = 'No image IDs provided'
-                response = HttpResponse(
-                    json.dumps({'error': error_msg}),
-                    content_type='application/json',
-                    status=400
+                return Response(
+                    {'error': 'No image IDs provided'},
+                    status=status.HTTP_400_BAD_REQUEST
                 )
-                response['X-Images-Count'] = '0'
-                response['X-Total-Annotations'] = '0'
-                return response
             
             # Fetch images from database
             images = Image.objects.filter(id__in=image_ids)
-            print(f"[YOLO-GEN] Found {images.count()} images in database")
             
             if not images.exists():
-                print(f"[YOLO-GEN] ERROR: No images found with IDs {image_ids}")
-                error_msg = f'No images found with provided IDs: {image_ids}'
-                response = HttpResponse(
-                    json.dumps({'error': error_msg}),
-                    content_type='application/json',
-                    status=404
+                return Response(
+                    {'error': f'No images found with provided IDs: {image_ids}'},
+                    status=status.HTTP_404_NOT_FOUND
                 )
-                response['X-Images-Count'] = '0'
-                response['X-Total-Annotations'] = '0'
-                return response
             
             images_list = list(images)
-            num_images = len(images_list)
-            print(f"[YOLO-GEN] Processing {num_images} images")
             
-            # Print image details
-            for img in images_list:
-                annot_count = img.annotations.count()
-                print(f"[YOLO-GEN]   - Image {img.id}: {img.name} ({annot_count} annotations)")
+            # Validate all images have annotations
+            images_with_annotations = [img for img in images_list if img.annotations.count() > 0]
             
-            # Generate simple text-only response first to test
-            if num_images == 1:
-                print("[YOLO-GEN] Single image detected - generating .txt file")
-                
-                image = images_list[0]
-                try:
-                    yolo_content = YOLOConverter.generate_yolo_text(image)
-                    print(f"[YOLO-GEN] Generated YOLO content: {len(yolo_content)} bytes")
-                    
-                    filename = f"{image.id}_{Path(image.name).stem}.txt"
-                    print(f"[YOLO-GEN] Filename: {filename}")
-                    
-                    response = HttpResponse(
-                        yolo_content.encode('utf-8'),
-                        content_type='text/plain'
-                    )
-                    response['Content-Disposition'] = f'attachment; filename="{filename}"'
-                    response['X-Images-Count'] = str(1)
-                    response['X-Total-Annotations'] = str(image.annotations.count())
-                    
-                    print(f"[YOLO-GEN] SUCCESS: Returning text file {filename}")
-                    return response
-                    
-                except Exception as e:
-                    print(f"[YOLO-GEN] ERROR generating text file: {str(e)}")
-                    import traceback
-                    traceback.print_exc()
-                    raise
+            if not images_with_annotations:
+                return Response(
+                    {'error': 'No images with annotations found'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
             
-            else:
-                print(f"[YOLO-GEN] Multiple images ({num_images}) detected - generating .zip file")
-                
-                try:
-                    print("[YOLO-GEN] Calling generate_yolo_zip_with_images()...")
-                    zip_buffer = YOLOConverter.generate_yolo_zip_with_images(images_list)
-                    
-                    zip_data = zip_buffer.getvalue()
-                    print(f"[YOLO-GEN] ZIP generated successfully: {len(zip_data)} bytes")
-                    
-                    # Count total annotations
-                    total_annotations = sum(img.annotations.count() for img in images_list)
-                    print(f"[YOLO-GEN] Total annotations: {total_annotations}")
-                    
-                    filename = f"yolo_dataset_{num_images}_images.zip"
-                    print(f"[YOLO-GEN] Filename: {filename}")
-                    
-                    response = HttpResponse(
-                        zip_data,
-                        content_type='application/zip'
-                    )
-                    response['Content-Disposition'] = f'attachment; filename="{filename}"'
-                    response['X-Images-Count'] = str(num_images)
-                    response['X-Total-Annotations'] = str(total_annotations)
-                    
-                    print(f"[YOLO-GEN] SUCCESS: Returning ZIP file {filename} ({len(zip_data)} bytes)")
-                    return response
-                    
-                except Exception as e:
-                    print(f"[YOLO-GEN] ERROR generating ZIP file: {str(e)}")
-                    import traceback
-                    traceback.print_exc()
-                    raise
+            # Generate ZIP file
+            zip_buffer = YOLOConverter.generate_yolo_zip(images_with_annotations)
+            zip_data = zip_buffer.getvalue()
+            
+            # Count total annotations
+            total_annotations = sum(img.annotations.count() for img in images_with_annotations)
+            num_images = len(images_with_annotations)
+            
+            # Create HTTP response for ZIP file download
+            response = HttpResponse(
+                zip_data,
+                content_type='application/zip'
+            )
+            filename = f"yolo_dataset_{num_images}_images.zip"
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+            response['X-Images-Count'] = str(num_images)
+            response['X-Total-Annotations'] = str(total_annotations)
+            
+            return response
         
         except Exception as e:
-            print(f"[YOLO-GEN] FATAL ERROR: {str(e)}")
-            import traceback
-            print(traceback.format_exc())
-            
             return Response(
                 {'error': f'Failed to generate dataset: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -413,6 +343,158 @@ class AnnotationViewSet(viewsets.ModelViewSet):
         
         serializer = AnnotationSerializer(annotations, many=True)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+from rest_framework.views import APIView
+
+class InferenceViewSet(APIView):
+    """
+    API View for running YOLO inference on images.
+    
+    Methods:
+    - POST /api/inference/ - Run inference on uploaded image
+    """
+    parser_classes = (MultiPartParser, FormParser)
+    
+    def post(self, request):
+        """
+        Run inference on uploaded image.
+        
+        Request:
+            - image: ImageField (required) - Image file for inference
+            - confidence: float (optional) - Confidence threshold (0-1), default 0.5
+            - iou: float (optional) - IOU threshold for NMS (0-1), default 0.45
+        
+        Response:
+            {
+                "success": boolean,
+                "message": str,
+                "detections": [
+                    {
+                        "label": str,
+                        "confidence": float,
+                        "bbox": {
+                            "x": float,
+                            "y": float,
+                            "width": float,
+                            "height": float
+                        }
+                    },
+                    ...
+                ],
+                "detection_count": int,
+                "processing_time": float
+            }
+        """
+        import tempfile
+        import time
+        import logging
+        from .services.inference import InferenceService
+        from .serializers import InferenceRequestSerializer, InferenceResponseSerializer
+        
+        logger = logging.getLogger(__name__)
+        start_time = time.time()
+        
+        try:
+            # Validate request
+            serializer = InferenceRequestSerializer(data=request.data)
+            if not serializer.is_valid():
+                return Response(
+                    {
+                        'success': False,
+                        'message': 'Invalid request',
+                        'errors': serializer.errors
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            validated_data = serializer.validated_data
+            image_file = validated_data['image']
+            confidence = validated_data.get('confidence', 0.5)
+            iou = validated_data.get('iou', 0.45)
+            
+            logger.info(f"Processing inference request with confidence={confidence}, iou={iou}")
+            
+            # Save image to temporary file
+            with tempfile.NamedTemporaryFile(
+                suffix='.png',
+                delete=False,
+                dir=tempfile.gettempdir()
+            ) as tmp_file:
+                temp_image_path = tmp_file.name
+                
+                # Write uploaded file to temporary location
+                for chunk in image_file.chunks():
+                    tmp_file.write(chunk)
+            
+            logger.debug(f"Image saved to temporary file: {temp_image_path}")
+            
+            try:
+                # Run inference
+                inference_service = InferenceService()
+                detections = inference_service.run_inference(
+                    image_path=temp_image_path,
+                    confidence=confidence,
+                    iou=iou
+                )
+                
+                processing_time = time.time() - start_time
+                
+                response_data = {
+                    'success': True,
+                    'message': f'Inference completed successfully. Found {len(detections)} detections.',
+                    'detections': detections,
+                    'detection_count': len(detections),
+                    'processing_time': round(processing_time, 3)
+                }
+                
+                logger.info(f"Inference successful: {len(detections)} detections, {processing_time:.3f}s")
+                
+                return Response(response_data, status=status.HTTP_200_OK)
+                
+            except (FileNotFoundError, ValueError) as e:
+                logger.error(f"Validation error: {str(e)}")
+                processing_time = time.time() - start_time
+                return Response(
+                    {
+                        'success': False,
+                        'message': f'Inference validation failed: {str(e)}',
+                        'processing_time': round(processing_time, 3)
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            except RuntimeError as e:
+                logger.error(f"Model error: {str(e)}")
+                processing_time = time.time() - start_time
+                return Response(
+                    {
+                        'success': False,
+                        'message': f'Model error: {str(e)}',
+                        'processing_time': round(processing_time, 3)
+                    },
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+            
+            finally:
+                # Clean up temporary file
+                try:
+                    Path(temp_image_path).unlink(missing_ok=True)
+                    logger.debug(f"Cleaned up temporary file: {temp_image_path}")
+                except Exception as e:
+                    logger.warning(f"Failed to delete temporary file {temp_image_path}: {str(e)}")
+        
+        except Exception as e:
+            logger.error(f"Unexpected inference error: {str(e)}", exc_info=True)
+            processing_time = time.time() - start_time
+            return Response(
+                {
+                    'success': False,
+                    'message': f'Unexpected error: {str(e)}',
+                    'processing_time': round(processing_time, 3)
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
 class HealthCheckView(viewsets.ViewSet):

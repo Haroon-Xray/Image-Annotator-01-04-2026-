@@ -5,10 +5,12 @@ import ImageSidebar from './components/ImageSidebar'
 import Toolbar from './components/Toolbar'
 import AnnotationCanvas from './components/AnnotationCanvas'
 import AnnotationsPanel from './components/AnnotationsPanel'
+import InferencePanel from './components/InferencePanel'
 import styles from './App.module.css'
 
 export default function App() {
    const [tool, setTool] = useState('draw')
+   const [activeTab, setActiveTab] = useState('annotate') // 'annotate' or 'inference'
    const {
       images, activeImageId, setActiveImageId, activeImage,
       activeAnnotations, annotations, selectedBoxId, setSelectedBoxId,
@@ -68,22 +70,29 @@ export default function App() {
                onRemove={removeImage} annotations={annotations}
             />
             <div className={styles.center}>
-               <Toolbar
-                  tool={tool} setTool={setTool} imageName={activeImage?.name}
-                  hasAnnotations={activeAnnotations.length > 0}
-                  onUndo={() => {
-                     if (activeImageId && activeAnnotations.length > 0)
-                        deleteAnnotation(activeImageId, activeAnnotations[activeAnnotations.length - 1].id)
-                  }}
-                  onClearAll={() => activeImageId && clearAnnotations(activeImageId)}
-               />
-               <AnnotationCanvas
-                  image={activeImage} annotations={activeAnnotations}
-                  selectedBoxId={selectedBoxId} onSelectBox={setSelectedBoxId}
-                  tool={tool}
-                  onAddBox={(box) => activeImageId && addAnnotation(activeImageId, box)}
-                  onUpdateBox={(boxId, changes) => activeImageId && updateAnnotation(activeImageId, boxId, changes)}
-               />
+               {activeTab === 'annotate' && (
+                  <>
+                     <Toolbar
+                        tool={tool} setTool={setTool} imageName={activeImage?.name}
+                        hasAnnotations={activeAnnotations.length > 0}
+                        onUndo={() => {
+                           if (activeImageId && activeAnnotations.length > 0)
+                              deleteAnnotation(activeImageId, activeAnnotations[activeAnnotations.length - 1].id)
+                        }}
+                        onClearAll={() => activeImageId && clearAnnotations(activeImageId)}
+                     />
+                     <AnnotationCanvas
+                        image={activeImage} annotations={activeAnnotations}
+                        selectedBoxId={selectedBoxId} onSelectBox={setSelectedBoxId}
+                        tool={tool}
+                        onAddBox={(box) => activeImageId && addAnnotation(activeImageId, box)}
+                        onUpdateBox={(boxId, changes) => activeImageId && updateAnnotation(activeImageId, boxId, changes)}
+                     />
+                  </>
+               )}
+               {activeTab === 'inference' && (
+                  <InferencePanel />
+               )}
             </div>
             <AnnotationsPanel
                annotations={activeAnnotations} selectedBoxId={selectedBoxId}
@@ -93,6 +102,22 @@ export default function App() {
                exportJSON={exportJSON}
                imageWidth={activeImage?.width} imageHeight={activeImage?.height}
             />
+         </div>
+         
+         {/* Tab Navigation */}
+         <div className={styles.tabNavigation}>
+            <button 
+               className={`${styles.tabButton} ${activeTab === 'annotate' ? styles.active : ''}`}
+               onClick={() => setActiveTab('annotate')}
+            >
+               ✏️ Annotate
+            </button>
+            <button 
+               className={`${styles.tabButton} ${activeTab === 'inference' ? styles.active : ''}`}
+               onClick={() => setActiveTab('inference')}
+            >
+               🤖 Inference
+            </button>
          </div>
       </div>
    )

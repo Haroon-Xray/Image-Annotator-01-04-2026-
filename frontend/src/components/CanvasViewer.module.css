@@ -1,0 +1,43 @@
+.canvasViewerContainer {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin: 16px 0;
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.canvasWrapper {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  max-height: 600px;
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border: 2px solid #93c5fd;
+}
+
+.canvas {
+  display: block;
+  max-width: 100%;
+  max-height: 550px;
+  height: auto;
+  border-radius: 6px;
+  background: white;
+}
+
+@media (max-width: 768px) {
+  .canvasViewerContainer {
+    max-height: 400px;
+  }
+
+  .canvasWrapper {
+    max-height: 400px;
+  }
+
+  .canvas {
+    max-height: 350px;
+  }
+}

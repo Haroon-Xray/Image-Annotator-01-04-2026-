@@ -139,3 +139,46 @@ class YOLODatasetGeneratorSerializer(serializers.Serializer):
         required=False,
         help_text="Output directory name for dataset"
     )
+
+
+class BboxSerializer(serializers.Serializer):
+    """Serializer for bounding box coordinates"""
+    x = serializers.FloatField(help_text="Normalized center X coordinate (0-1)")
+    y = serializers.FloatField(help_text="Normalized center Y coordinate (0-1)")
+    width = serializers.FloatField(help_text="Normalized width (0-1)")
+    height = serializers.FloatField(help_text="Normalized height (0-1)")
+
+
+class DetectionSerializer(serializers.Serializer):
+    """Serializer for a single detection result"""
+    label = serializers.CharField(help_text="Class name")
+    confidence = serializers.FloatField(help_text="Confidence score (0-1)")
+    bbox = BboxSerializer(help_text="Bounding box coordinates")
+
+
+class InferenceRequestSerializer(serializers.Serializer):
+    """Serializer for inference API request"""
+    image = serializers.ImageField(help_text="Image file for inference")
+    confidence = serializers.FloatField(
+        default=0.5,
+        required=False,
+        min_value=0.0,
+        max_value=1.0,
+        help_text="Confidence threshold for detections (0-1)"
+    )
+    iou = serializers.FloatField(
+        default=0.45,
+        required=False,
+        min_value=0.0,
+        max_value=1.0,
+        help_text="IOU threshold for NMS (0-1)"
+    )
+
+
+class InferenceResponseSerializer(serializers.Serializer):
+    """Serializer for inference API response"""
+    success = serializers.BooleanField()
+    message = serializers.CharField()
+    detections = DetectionSerializer(many=True, required=False)
+    detection_count = serializers.IntegerField(required=False)
+    processing_time = serializers.FloatField(required=False, help_text="Processing time in seconds")

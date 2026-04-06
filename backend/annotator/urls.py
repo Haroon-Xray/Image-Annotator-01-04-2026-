@@ -22,5 +22,8 @@ urlpatterns = [
     path('images/<int:image_id>/annotations/batch-create/', 
          views.AnnotationViewSet.as_view({'post': 'batch_create'}), 
          name='annotation-batch-create'),
+    path('inference/', 
+         views.InferenceViewSet.as_view(), 
+         name='inference'),
     path('health/', views.HealthCheckView.as_view({'get': 'health'}), name='health-check'),
 ]
