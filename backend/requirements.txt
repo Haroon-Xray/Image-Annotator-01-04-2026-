@@ -4,3 +4,6 @@ django-cors-headers==4.3.1
 psycopg2-binary==2.9.9
 Pillow==10.1.0
 python-decouple==3.8
+ultralytics==8.1.0
+opencv-python==4.8.1.78
+
