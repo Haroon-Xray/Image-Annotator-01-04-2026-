@@ -38,6 +38,12 @@ urlpatterns = [
     # Admin
     path('admin/', admin.site.urls),
     
+    # Static files - MUST be before React catch-all
+    path('static/<path:path>', serve, {'document_root': settings.STATIC_ROOT}, name='static'),
+    
+    # Media files - MUST be before React catch-all
+    path('media/<path:path>', serve, {'document_root': settings.MEDIA_ROOT}, name='media'),
+    
     # Logo - must be before catch-all
     path('logo.png', serve_logo, name='logo'),
     
@@ -47,11 +53,10 @@ urlpatterns = [
     # React app - serve index.html
     path('', ReactAppView.as_view(), name='react_app'),
     
-    # Catch-all for React Router - all other paths go to React (excluding files with extensions)
+    # Catch-all for React Router - all other paths go to React
     re_path(r'^(?!api|admin|static|media|logo)(?!.*\.\w+$).*$', ReactAppView.as_view(), name='react_router_fallback'),
 ]
 
-# Serve media files in development
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+# Backup: Also add via static() for additional default files (favicon, etc)
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
