@@ -2,14 +2,36 @@
 
 A web-based image annotation tool with AI-powered object detection using YOLOv8.
 
-## 🚀 Quick Install
+## 🚀 Quick Start
 
-### Prerequisites
-- **Python 3.8+**
-- **Node.js 16+**
-- **PostgreSQL** (optional, SQLite works for development)
+### Option 1: Using Docker (Recommended)
 
-### Backend Setup
+```bash
+# Clone the project
+git clone <repository>
+cd image-annotator
+
+# Copy environment template
+cp .env.example .env
+
+# Build and start with Docker
+docker-compose up --build
+
+# Access the app
+# Frontend: http://localhost:5173
+# Backend:  http://localhost:8000
+```
+
+For detailed Docker setup, see [docs/DOCKER_SETUP.md](docs/DOCKER_SETUP.md)
+
+### Option 2: Manual Setup
+
+**Prerequisites:**
+- Python 3.8+
+- Node.js 16+
+- PostgreSQL (optional, SQLite works for development)
+
+#### Backend Setup
 
 ```bash
 # Navigate to backend
@@ -36,7 +58,7 @@ python manage.py runserver
 
 Server runs on: `http://localhost:8000`
 
-### Frontend Setup
+#### Frontend Setup
 
 ```bash
 # Navigate to frontend
@@ -93,10 +115,17 @@ For complete documentation, architecture details, and feature guides, please vis
 
 ## 🔗 Useful Resources
 
+### Getting Started
+- [Installation Guide](README.md) - Setup instructions
+- [Docker Setup](docs/DOCKER_SETUP.md) - Run with Docker (recommended)
+- [Docker Quick Reference](docs/DOCKER_QUICK_REFERENCE.md) - Docker commands
+
+### Documentation
 - [Quick Reference](docs/QUICK_REFERENCE.md) - Commands and API endpoints
 - [Security Configuration](docs/SECURITY_CONFIGURATION.md) - Deployment security
 - [Inference Guide](docs/INFERENCE_DEPLOYMENT_GUIDE.md) - YOLOv8 setup
 - [Testing Guide](docs/YOLO_TESTING_GUIDE.md) - Test procedures
+- [Complete Documentation](docs/README.md) - All documentation
 
 ## 📝 License
 

@@ -1,0 +1,208 @@
+# Docker Compose configuration for Image Annotator
+# Orchestrates the Django backend and React frontend services
+#
+# Usage:
+#   docker-compose up --build       # Build and start all services
+#   docker-compose up               # Start services (without rebuild)
+#   docker-compose down             # Stop and remove containers
+#   docker-compose logs -f          # View logs in real-time
+#   docker-compose logs backend     # View only backend logs
+#   docker-compose logs frontend    # View only frontend logs
+
+version: '3.8'
+
+services:
+  # ============================================================================
+  # BACKEND SERVICE - Django REST API
+  # ============================================================================
+  backend:
+    # Build from backend Dockerfile
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+
+    # Container name for easy reference
+    container_name: image-annotator-backend
+
+    # Service name for internal networking
+    networks:
+      - image-annotator-network
+
+    # Port mapping: HOST:CONTAINER
+    # Access backend at http://localhost:8000
+    ports:
+      - "8000:8000"
+
+    # Volume mounts for development
+    # - Source (host):Destination (container)
+    # Allows code changes to reflect in container without rebuild
+    volumes:
+      - ./backend:/app
+      - /app/__pycache__ # Exclude pycache from sync
+
+    # Environment variables
+    environment:
+      # Django settings
+      PYTHONUNBUFFERED: 1
+      PYTHONDONTWRITEBYTECODE: 1
+      DJANGO_SETTINGS_MODULE: backend.settings
+
+      # Database configuration
+      # Mounted from .env file (create if doesn't exist)
+      DEBUG: "false"
+      SECRET_KEY: ${SECRET_KEY:-django-insecure-dev-key-change-in-production}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1,backend,0.0.0.0}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173}
+
+      # Database (PostgreSQL or SQLite)
+      DB_ENGINE: ${DB_ENGINE:-sqlite3}
+      DB_NAME: ${DB_NAME:-db.sqlite3}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      DB_HOST: ${DB_HOST:-postgres}
+      DB_PORT: ${DB_PORT:-5432}
+
+    # Restart policy
+    # - no: Do not automatically restart
+    # - always: Always restart if container exits
+    # - on-failure: Restart only on failure
+    restart: unless-stopped
+
+    # Health check (optional - uncomment if using)
+    # healthcheck:
+    #   test: ["CMD", "curl", "-f", "http://localhost:8000/api/health/"]
+    #   interval: 30s
+    #   timeout: 10s
+    #   retries: 3
+    #   start_period: 40s
+
+    # Standard input/output for interactive container
+    stdin_open: true
+    tty: true
+
+  # ============================================================================
+  # FRONTEND SERVICE - React + Vite Development Server
+  # ============================================================================
+  frontend:
+    # Build from frontend Dockerfile
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+
+    # Container name for easy reference
+    container_name: image-annotator-frontend
+
+    # Service name for internal networking
+    networks:
+      - image-annotator-network
+
+    # Port mapping: HOST:CONTAINER
+    # Access frontend at http://localhost:5173 (Vite default)
+    # Or http://localhost:3000 if using different configuration
+    ports:
+      - "5173:5173"
+      # Uncomment below if you want to also map port 3000
+      # - "3000:3000"
+
+      # Volume mounts for development
+      # - Source (host):Destination (container)
+      # Enables hot module replacement (HMR) during development
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules # Don't sync node_modules (improves performance)
+
+    # Environment variables
+    environment:
+      # Node environment
+      NODE_ENV: development
+
+      # Vite specific configuration
+      VITE_HOST: 0.0.0.0
+      VITE_PORT: 5173
+
+      # Allow connections from outside container
+      CHOKIDAR_USEPOLLING: "true"
+
+      # Backend API URL (for frontend to communicate with backend)
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:8000/api}
+
+    # Restart policy
+    restart: unless-stopped
+
+    # Depends on backend being available (optional)
+    # Uncomment if frontend needs backend to be healthy first
+    # depends_on:
+    #   backend:
+    #     condition: service_healthy
+
+    # Standard input/output for interactive container
+    stdin_open: true
+    tty: true
+
+# ============================================================================
+# NETWORKS - Docker internal networking
+# ============================================================================
+networks:
+  # Custom network for service-to-service communication
+  # Services can reach each other using service names:
+  # - backend service name: "backend"
+  # - frontend service name: "frontend"
+  # Example: Frontend can call http://backend:8000/api/
+  image-annotator-network:
+    driver: bridge
+
+# ============================================================================
+# VOLUMES - Optional persistent storage (commented out for development)
+# ============================================================================
+# volumes:
+#   postgres_data:
+#     driver: local
+#   media_data:
+#     driver: local
+#
+# Uncomment above and modify services if using PostgreSQL:
+# backend:
+#   depends_on:
+#     - postgres
+#
+# postgres:
+#   image: postgres:15-alpine
+#   environment:
+#     POSTGRES_DB: image_annotator
+#     POSTGRES_USER: postgres
+#     POSTGRES_PASSWORD: postgres
+#   volumes:
+#     - postgres_data:/var/lib/postgresql/data
+
+# ============================================================================
+# USAGE INSTRUCTIONS
+# ============================================================================
+#
+# 1. Start services (build if needed):
+#    docker-compose up --build
+#
+# 2. Start services (without rebuild):
+#    docker-compose up
+#
+# 3. Stop services:
+#    docker-compose down
+#
+# 4. View logs:
+#    docker-compose logs -f          # All services
+#    docker-compose logs backend     # Backend only
+#    docker-compose logs frontend    # Frontend only
+#
+# 5. Execute command in container:
+#    docker-compose exec backend python manage.py migrate
+#    docker-compose exec backend python manage.py createsuperuser
+#
+# 6. Access services:
+#    Backend API:  http://localhost:8000
+#    Frontend App: http://localhost:5173
+#    Django Admin: http://localhost:8000/admin/
+#
+# 7. Environment variables:
+#    Copy .env.example to .env and update values
+#    Or set via docker-compose.yml environment section
+#
+# ============================================================================

@@ -1,0 +1,43 @@
+# Python cache files
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv
+
+# Django specific
+*.sqlite3
+db.sqlite3
+/media
+/staticfiles
+.env
+.env.local
+.env.*.local
+
+# IDE and editor files
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Git
+.git
+.gitignore
+
+# Testing and coverage
+.pytest_cache
+.coverage
+htmlcov/
+
+# OS specific
+*.log
+.DS_Store
+Thumbs.db
+
+# Node modules (if any)
+node_modules/

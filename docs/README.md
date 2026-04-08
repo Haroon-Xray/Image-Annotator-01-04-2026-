@@ -18,6 +18,7 @@ Welcome to the Image Annotator documentation. This folder contains comprehensive
 
 | File | Purpose | Best For |
 |------|---------|----------|
+| [DOCKER_SETUP.md](DOCKER_SETUP.md) | Docker & Docker Compose setup | Running with Docker |
 | [QUICK_REFERENCE.md](QUICK_REFERENCE.md) | Essential commands and endpoints | Quick lookup |
 | [SECURITY_CONFIGURATION.md](SECURITY_CONFIGURATION.md) | Security best practices | Production deployment |
 | [INFERENCE_DEPLOYMENT_GUIDE.md](INFERENCE_DEPLOYMENT_GUIDE.md) | YOLOv8 setup and usage | Inference feature |
@@ -35,9 +36,10 @@ Welcome to the Image Annotator documentation. This folder contains comprehensive
 New to the project? Start here:
 
 1. **First Time Setup** → Read [day1.md](day1.md) for prerequisites and installation
-2. **Understanding Features** → Read [day2.md](day2.md) through [day5.md](day5.md) in order
-3. **Common Tasks** → Use [QUICK_REFERENCE.md](QUICK_REFERENCE.md) for command reference
-4. **Production Deployment** → Follow [SECURITY_CONFIGURATION.md](SECURITY_CONFIGURATION.md)
+2. **Using Docker** → Read [DOCKER_SETUP.md](DOCKER_SETUP.md) for containerized setup
+3. **Understanding Features** → Read [day2.md](day2.md) through [day5.md](day5.md) in order
+4. **Common Tasks** → Use [QUICK_REFERENCE.md](QUICK_REFERENCE.md) for command reference
+5. **Production Deployment** → Follow [SECURITY_CONFIGURATION.md](SECURITY_CONFIGURATION.md)
 
 ## 📖 File Descriptions
 
@@ -86,6 +88,16 @@ New to the project? Start here:
 - YOLO dataset generation and download
 
 **Why it exists:** Adds AI-powered object detection capabilities.
+
+### DOCKER_SETUP.md - Docker & Docker Compose
+**What it covers:**
+- Docker containerization
+- Docker Compose orchestration
+- Development with Docker
+- Production deployment with Docker
+- Troubleshooting common Docker issues
+
+**Why it exists:** Enables consistent development environment and easy deployment.
 
 ## 🔗 Related Files
 
